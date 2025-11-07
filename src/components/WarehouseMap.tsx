@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useWarehouse } from '../context/WarehouseContext';
+import { LayoutBuilder } from './LayoutBuilder';
 import type { Zone } from '../types';
 
 export function WarehouseMap() {
-  const { layout, units, selectedUnit } = useWarehouse();
+  const { layout, units, selectedUnit, updateLayout } = useWarehouse();
+  const [showLayoutBuilder, setShowLayoutBuilder] = useState(false);
 
   const getUnitsInZone = (zoneId: string) => {
     return units.filter(u => {
@@ -56,7 +59,15 @@ export function WarehouseMap() {
 
   return (
     <div className="bg-gray-900 rounded-lg p-4 h-full">
-      <h2 className="text-xl font-bold mb-4 text-white">{layout.name}</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-bold text-white">{layout.name}</h2>
+        <button
+          onClick={() => setShowLayoutBuilder(true)}
+          className="bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
+        >
+          🏗️ Edit Layout
+        </button>
+      </div>
       <div className="relative w-full aspect-[3/2] bg-gray-800 rounded border-2 border-gray-700">
         {layout.zones.map(renderZone)}
       </div>
@@ -69,6 +80,16 @@ export function WarehouseMap() {
             Serial: {selectedUnit.serialNumber}
           </div>
         </div>
+      )}
+
+      {showLayoutBuilder && (
+        <LayoutBuilder
+          zones={layout.zones}
+          gridWidth={layout.gridWidth}
+          gridHeight={layout.gridHeight}
+          onSave={(zones) => updateLayout({ zones })}
+          onClose={() => setShowLayoutBuilder(false)}
+        />
       )}
     </div>
   );

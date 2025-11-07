@@ -11,6 +11,7 @@ interface WarehouseContextType {
   selectUnit: (unit: Unit | null) => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  updateLayout: (layout: Partial<WarehouseLayout>) => void;
 }
 
 const WarehouseContext = createContext<WarehouseContextType | undefined>(undefined);
@@ -31,7 +32,10 @@ const defaultLayout: WarehouseLayout = {
 };
 
 export function WarehouseProvider({ children }: { children: ReactNode }) {
-  const [layout] = useState<WarehouseLayout>(defaultLayout);
+  const [layout, setLayout] = useState<WarehouseLayout>(() => {
+    const saved = localStorage.getItem('warehouse-layout');
+    return saved ? JSON.parse(saved) : defaultLayout;
+  });
   const [units, setUnits] = useState<Unit[]>(() => {
     const saved = localStorage.getItem('warehouse-units');
     return saved ? JSON.parse(saved) : [];
@@ -39,10 +43,14 @@ export function WarehouseProvider({ children }: { children: ReactNode }) {
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Save to localStorage whenever units change
+  // Save to localStorage whenever units or layout change
   useEffect(() => {
     localStorage.setItem('warehouse-units', JSON.stringify(units));
   }, [units]);
+
+  useEffect(() => {
+    localStorage.setItem('warehouse-layout', JSON.stringify(layout));
+  }, [layout]);
 
   const addUnit = (unit: Unit) => {
     setUnits([...units, unit]);
@@ -63,6 +71,10 @@ export function WarehouseProvider({ children }: { children: ReactNode }) {
     setSelectedUnit(unit);
   };
 
+  const updateLayout = (updates: Partial<WarehouseLayout>) => {
+    setLayout({ ...layout, ...updates });
+  };
+
   return (
     <WarehouseContext.Provider
       value={{
@@ -75,6 +87,7 @@ export function WarehouseProvider({ children }: { children: ReactNode }) {
         selectUnit,
         searchQuery,
         setSearchQuery,
+        updateLayout,
       }}
     >
       {children}
