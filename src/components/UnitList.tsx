@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { useWarehouse } from '../context/WarehouseContext';
+import { EditUnitForm } from './EditUnitForm';
 import type { Unit } from '../types';
 
 export function UnitList() {
   const { units, selectedUnit, selectUnit, searchQuery, setSearchQuery } = useWarehouse();
+  const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
 
   const getLocationText = (unit: Unit) => {
     if (unit.location.type === 'floor') {
@@ -51,33 +54,53 @@ export function UnitList() {
           filteredUnits.map(unit => (
             <div
               key={unit.id}
-              onClick={() => selectUnit(unit.id === selectedUnit?.id ? null : unit)}
-              className={`p-3 rounded-lg cursor-pointer transition-all ${
+              className={`p-3 rounded-lg transition-all ${
                 selectedUnit?.id === unit.id
                   ? 'bg-blue-600 border-2 border-blue-400'
                   : 'bg-gray-800 border border-gray-700 hover:bg-gray-750'
               }`}
             >
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <div className="font-semibold text-white">
-                    {unit.brand} {unit.model}
+              <div
+                onClick={() => selectUnit(unit.id === selectedUnit?.id ? null : unit)}
+                className="cursor-pointer"
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <div className="font-semibold text-white">
+                      {unit.brand} {unit.model}
+                    </div>
+                    <div className="text-sm text-gray-400">
+                      S/N: {unit.serialNumber}
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-400">
-                    S/N: {unit.serialNumber}
-                  </div>
+                  <span className={`px-2 py-1 rounded text-xs font-semibold text-white ${getStatusColor(unit.status)}`}>
+                    {unit.status}
+                  </span>
                 </div>
-                <span className={`px-2 py-1 rounded text-xs font-semibold text-white ${getStatusColor(unit.status)}`}>
-                  {unit.status}
-                </span>
+                <div className="text-xs text-gray-400">
+                  📍 {getLocationText(unit)}
+                </div>
               </div>
-              <div className="text-xs text-gray-400">
-                📍 {getLocationText(unit)}
-              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingUnit(unit);
+                }}
+                className="mt-2 w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-1 px-2 rounded transition-colors"
+              >
+                Edit
+              </button>
             </div>
           ))
         )}
       </div>
+
+      {editingUnit && (
+        <EditUnitForm
+          unit={editingUnit}
+          onClose={() => setEditingUnit(null)}
+        />
+      )}
     </div>
   );
 }
