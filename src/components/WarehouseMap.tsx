@@ -1,11 +1,12 @@
-import { useState } from 'react';
 import { useWarehouse } from '../context/WarehouseContext';
-import { LayoutBuilder } from './LayoutBuilder';
 import type { Zone } from '../types';
 
-export function WarehouseMap() {
-  const { layout, units, selectedUnit, updateLayout } = useWarehouse();
-  const [showLayoutBuilder, setShowLayoutBuilder] = useState(false);
+interface WarehouseMapProps {
+  onEditLayout: () => void;
+}
+
+export function WarehouseMap({ onEditLayout }: WarehouseMapProps) {
+  const { layout, units, selectedUnit } = useWarehouse();
 
   const getUnitsInZone = (zoneId: string) => {
     return units.filter(u => {
@@ -62,7 +63,7 @@ export function WarehouseMap() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-bold text-white">{layout.name}</h2>
         <button
-          onClick={() => setShowLayoutBuilder(true)}
+          onClick={onEditLayout}
           className="bg-purple-600 hover:bg-purple-700 text-white text-sm font-semibold py-2 px-3 rounded transition-colors"
         >
           🏗️ Edit Layout
@@ -80,16 +81,6 @@ export function WarehouseMap() {
             Serial: {selectedUnit.serialNumber}
           </div>
         </div>
-      )}
-
-      {showLayoutBuilder && (
-        <LayoutBuilder
-          zones={layout.zones}
-          gridWidth={layout.gridWidth}
-          gridHeight={layout.gridHeight}
-          onSave={(zones) => updateLayout({ zones })}
-          onClose={() => setShowLayoutBuilder(false)}
-        />
       )}
     </div>
   );

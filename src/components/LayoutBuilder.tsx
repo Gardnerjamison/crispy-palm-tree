@@ -52,8 +52,7 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
   // If editing a zone, show edit screen
   if (editingZone) {
     return (
-      <div className="fixed inset-0 bg-gray-950 z-50 overflow-y-auto">
-        <div className="min-h-screen p-4">
+      <div className="min-h-screen bg-gray-950 p-4">
           <div className="flex items-center justify-between mb-6">
             <button
               onClick={() => setEditingZone(null)}
@@ -204,15 +203,13 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
               Delete Zone
             </button>
           </div>
-        </div>
       </div>
     );
   }
 
   // Main list view
   return (
-    <div className="fixed inset-0 bg-gray-950 z-50 overflow-y-auto">
-      <div className="min-h-screen p-4">
+    <div className="min-h-screen bg-gray-950 p-4">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-white">Edit Layout</h2>
           <button
@@ -263,7 +260,6 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
         >
           Save Layout
         </button>
-      </div>
     </div>
   );
 }
