@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { WarehouseProvider, useWarehouse } from './context/WarehouseContext';
 import { WarehouseMap } from './components/WarehouseMap';
 import { UnitList } from './components/UnitList';
-import { AddUnitForm } from './components/AddUnitForm';
+import { AddUnitPage } from './components/AddUnitPage';
 import { ExportButton } from './components/ExportButton';
 import { LayoutBuilder } from './components/LayoutBuilder';
 
 function AppContent() {
   const [showLayoutBuilder, setShowLayoutBuilder] = useState(false);
+  const [showAddUnit, setShowAddUnit] = useState(false);
   const { layout, updateLayout } = useWarehouse();
 
   if (showLayoutBuilder) {
@@ -25,6 +26,12 @@ function AppContent() {
         }}
         onClose={() => setShowLayoutBuilder(false)}
       />
+    );
+  }
+
+  if (showAddUnit) {
+    return (
+      <AddUnitPage onClose={() => setShowAddUnit(false)} />
     );
   }
 
@@ -52,7 +59,12 @@ function AppContent() {
 
         {/* Right column: Units list */}
         <div className="lg:col-span-1 flex flex-col gap-4">
-          <AddUnitForm />
+          <button
+            onClick={() => setShowAddUnit(true)}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-colors"
+          >
+            + Add New Unit
+          </button>
           <div className="flex-1 min-h-[400px]">
             <UnitList />
           </div>

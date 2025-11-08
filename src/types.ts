@@ -5,6 +5,9 @@ export interface Unit {
   model: string;
   status: 'In Stock' | 'Sold-Prep' | 'Sold-Ready' | 'On Hold';
   location: FloorLocation | RackLocation;
+  equipmentNumber?: string;  // Company EQ number
+  fleetNumber?: string;       // Rental fleet number
+  photoUrl?: string;          // Photo (base64 or URL)
 }
 
 export interface FloorLocation {

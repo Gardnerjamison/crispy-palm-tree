@@ -13,11 +13,29 @@ export function EditUnitForm({ unit, onClose }: EditUnitFormProps) {
   const [serialNumber, setSerialNumber] = useState(unit.serialNumber);
   const [brand, setBrand] = useState(unit.brand);
   const [model, setModel] = useState(unit.model);
+  const [equipmentNumber, setEquipmentNumber] = useState(unit.equipmentNumber || '');
+  const [fleetNumber, setFleetNumber] = useState(unit.fleetNumber || '');
   const [status, setStatus] = useState<Unit['status']>(unit.status);
   const [zone, setZone] = useState(unit.location.zone);
   const [column, setColumn] = useState(unit.location.type === 'rack' ? unit.location.column : '');
   const [row, setRow] = useState(unit.location.type === 'rack' ? unit.location.row.toString() : '1');
   const [level, setLevel] = useState(unit.location.type === 'rack' ? unit.location.level.toString() : '1');
+  const [photoUrl, setPhotoUrl] = useState(unit.photoUrl || '');
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Photo must be less than 2MB');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const selectedZone = layout.zones.find(z => z.id === zone);
 
@@ -34,6 +52,9 @@ export function EditUnitForm({ unit, onClose }: EditUnitFormProps) {
       model,
       status,
       location,
+      equipmentNumber: equipmentNumber || undefined,
+      fleetNumber: fleetNumber || undefined,
+      photoUrl: photoUrl || undefined,
     });
 
     onClose();
@@ -60,6 +81,43 @@ export function EditUnitForm({ unit, onClose }: EditUnitFormProps) {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Photo */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Photo
+            </label>
+            {photoUrl ? (
+              <div className="relative">
+                <img
+                  src={photoUrl}
+                  alt="Unit"
+                  className="w-full h-32 object-cover rounded border-2 border-gray-700"
+                />
+                <button
+                  type="button"
+                  onClick={() => setPhotoUrl('')}
+                  className="absolute top-1 right-1 bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <label className="block w-full h-32 border-2 border-dashed border-gray-600 rounded cursor-pointer hover:border-blue-500 transition-colors">
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  onChange={handlePhotoUpload}
+                  className="hidden"
+                />
+                <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                  <span className="text-2xl mb-1">📷</span>
+                  <span className="text-xs">Add photo</span>
+                </div>
+              </label>
+            )}
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-1">
               Serial Number *
@@ -69,6 +127,30 @@ export function EditUnitForm({ unit, onClose }: EditUnitFormProps) {
               required
               value={serialNumber}
               onChange={(e) => setSerialNumber(e.target.value)}
+              className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Equipment Number (EQ #)
+            </label>
+            <input
+              type="text"
+              value={equipmentNumber}
+              onChange={(e) => setEquipmentNumber(e.target.value)}
+              className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Rental Fleet Number
+            </label>
+            <input
+              type="text"
+              value={fleetNumber}
+              onChange={(e) => setFleetNumber(e.target.value)}
               className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
