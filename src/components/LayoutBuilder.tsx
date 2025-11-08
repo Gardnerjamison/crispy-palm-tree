@@ -166,31 +166,37 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
               </div>
             </div>
 
-            {/* Preview */}
+            {/* Full Warehouse Preview */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Preview
+                Warehouse Layout Preview
               </label>
               <div
-                className="w-full bg-gray-800 rounded-lg border-2 border-gray-700 flex items-center justify-center p-8"
+                className="w-full bg-gray-800 rounded-lg border-2 border-gray-700 p-4"
                 style={{
                   aspectRatio: `${gridWidth}/${gridHeight}`,
-                  position: 'relative'
                 }}
               >
-                <div
-                  className="rounded-lg flex items-center justify-center"
-                  style={{
-                    backgroundColor: editingZone.color + '40',
-                    border: `3px solid ${editingZone.color}`,
-                    width: '60%',
-                    height: '60%'
-                  }}
-                >
-                  <div className="text-center text-white">
-                    <div className="font-bold">{editingZone.name}</div>
-                    <div className="text-sm mt-1">{editingZone.hasRacks ? '📦 Racks' : '🏢 Floor'}</div>
-                  </div>
+                <div className="relative w-full h-full bg-gray-700 rounded">
+                  {zones.map(zone => (
+                    <div
+                      key={zone.id}
+                      className={`absolute border-2 rounded transition-all ${
+                        editingZone.id === zone.id ? 'border-white border-4 z-10' : 'border-gray-900'
+                      }`}
+                      style={{
+                        left: `${(zone.x / gridWidth) * 100}%`,
+                        top: `${(zone.y / gridHeight) * 100}%`,
+                        width: `${(zone.width / gridWidth) * 100}%`,
+                        height: `${(zone.height / gridHeight) * 100}%`,
+                        backgroundColor: zone.color + '60',
+                      }}
+                    >
+                      <div className="p-1 text-[10px] font-semibold text-white truncate">
+                        {zone.name}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -218,6 +224,40 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
           >
             ×
           </button>
+        </div>
+
+        {/* Warehouse Preview */}
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-300 mb-2">
+            Current Layout
+          </label>
+          <div
+            className="w-full bg-gray-800 rounded-lg border-2 border-gray-700 p-4"
+            style={{
+              aspectRatio: `${gridWidth}/${gridHeight}`,
+            }}
+          >
+            <div className="relative w-full h-full bg-gray-700 rounded">
+              {zones.map(zone => (
+                <div
+                  key={zone.id}
+                  onClick={() => setEditingZone(zone)}
+                  className="absolute border-2 border-gray-900 rounded cursor-pointer hover:border-white transition-all"
+                  style={{
+                    left: `${(zone.x / gridWidth) * 100}%`,
+                    top: `${(zone.y / gridHeight) * 100}%`,
+                    width: `${(zone.width / gridWidth) * 100}%`,
+                    height: `${(zone.height / gridHeight) * 100}%`,
+                    backgroundColor: zone.color + '60',
+                  }}
+                >
+                  <div className="p-1 text-[10px] font-semibold text-white truncate">
+                    {zone.name}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Zone List */}
