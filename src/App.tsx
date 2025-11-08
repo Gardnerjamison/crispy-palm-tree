@@ -16,8 +16,11 @@ function AppContent() {
         zones={layout.zones}
         gridWidth={layout.gridWidth}
         gridHeight={layout.gridHeight}
-        onSave={(zones) => {
-          updateLayout({ zones });
+        onSave={(zones, gridWidth, gridHeight) => {
+          const updates: any = { zones };
+          if (gridWidth !== undefined) updates.gridWidth = gridWidth;
+          if (gridHeight !== undefined) updates.gridHeight = gridHeight;
+          updateLayout(updates);
           setShowLayoutBuilder(false);
         }}
         onClose={() => setShowLayoutBuilder(false)}

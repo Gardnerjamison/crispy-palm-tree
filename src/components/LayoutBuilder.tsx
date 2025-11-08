@@ -1,19 +1,36 @@
 import { useState } from 'react';
+import { GridBuilder } from './GridBuilder';
 import type { Zone } from '../types';
 
 interface LayoutBuilderProps {
   zones: Zone[];
   gridWidth: number;
   gridHeight: number;
-  onSave: (zones: Zone[]) => void;
+  onSave: (zones: Zone[], gridWidth?: number, gridHeight?: number) => void;
   onClose: () => void;
 }
 
 export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSave, onClose }: LayoutBuilderProps) {
   const [zones, setZones] = useState<Zone[]>(initialZones);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
+  const [showGridBuilder, setShowGridBuilder] = useState(false);
 
   const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'];
+
+  // If showing grid builder
+  if (showGridBuilder) {
+    return (
+      <GridBuilder
+        zones={zones}
+        gridWidth={gridWidth}
+        gridHeight={gridHeight}
+        onSave={(newZones, newWidth, newHeight) => {
+          onSave(newZones, newWidth, newHeight);
+        }}
+        onClose={onClose}
+      />
+    );
+  }
 
   const addZone = () => {
     const newZone: Zone = {
@@ -259,6 +276,15 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
             </div>
           </div>
         </div>
+
+        {/* Visual Grid Builder Button */}
+        <button
+          onClick={() => setShowGridBuilder(true)}
+          className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-colors mb-6 flex items-center justify-center gap-2"
+        >
+          <span className="text-xl">🎨</span>
+          Visual Grid Builder - Draw Zones
+        </button>
 
         {/* Zone List */}
         <div className="space-y-3 mb-6">
