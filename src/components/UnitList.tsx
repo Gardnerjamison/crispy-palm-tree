@@ -1,11 +1,12 @@
-import { useState } from 'react';
 import { useWarehouse } from '../context/WarehouseContext';
-import { EditUnitForm } from './EditUnitForm';
 import type { Unit } from '../types';
 
-export function UnitList() {
+interface UnitListProps {
+  onEditUnit: (unit: Unit) => void;
+}
+
+export function UnitList({ onEditUnit }: UnitListProps) {
   const { units, selectedUnit, selectUnit, searchQuery, setSearchQuery } = useWarehouse();
-  const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
 
   const getLocationText = (unit: Unit) => {
     if (unit.location.type === 'floor') {
@@ -84,7 +85,7 @@ export function UnitList() {
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  setEditingUnit(unit);
+                  onEditUnit(unit);
                 }}
                 className="mt-2 w-full bg-gray-700 hover:bg-gray-600 text-white text-sm py-1 px-2 rounded transition-colors"
               >
@@ -94,13 +95,6 @@ export function UnitList() {
           ))
         )}
       </div>
-
-      {editingUnit && (
-        <EditUnitForm
-          unit={editingUnit}
-          onClose={() => setEditingUnit(null)}
-        />
-      )}
     </div>
   );
 }
