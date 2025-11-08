@@ -11,7 +11,6 @@ interface LayoutBuilderProps {
 
 export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSave, onClose }: LayoutBuilderProps) {
   const [zones, setZones] = useState<Zone[]>(initialZones);
-  const [selectedZone, setSelectedZone] = useState<Zone | null>(null);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
 
   const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'];
@@ -41,7 +40,6 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
   const deleteZone = (id: string) => {
     if (window.confirm('Delete this zone?')) {
       setZones(zones.filter(z => z.id !== id));
-      if (selectedZone?.id === id) setSelectedZone(null);
       if (editingZone?.id === id) setEditingZone(null);
     }
   };
@@ -51,11 +49,172 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
     onClose();
   };
 
+  // If editing a zone, show edit screen
+  if (editingZone) {
+    return (
+      <div className="fixed inset-0 bg-gray-950 z-50 overflow-y-auto">
+        <div className="min-h-screen p-4">
+          <div className="flex items-center justify-between mb-6">
+            <button
+              onClick={() => setEditingZone(null)}
+              className="text-blue-400 text-lg font-semibold"
+            >
+              ← Back
+            </button>
+            <h2 className="text-xl font-bold text-white">Edit Zone</h2>
+            <div className="w-16"></div>
+          </div>
+
+          <div className="space-y-6">
+            {/* Zone Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Zone Name
+              </label>
+              <input
+                type="text"
+                value={editingZone.name}
+                onChange={(e) => updateZone(editingZone.id, { name: e.target.value })}
+                className="w-full p-4 bg-gray-800 border border-gray-700 rounded-lg text-white text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            {/* Color Picker */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Color
+              </label>
+              <div className="grid grid-cols-4 gap-3">
+                {colors.map(color => (
+                  <button
+                    key={color}
+                    onClick={() => updateZone(editingZone.id, { color })}
+                    className={`h-16 rounded-lg border-4 transition-all ${
+                      editingZone.color === color ? 'border-white scale-105' : 'border-gray-700'
+                    }`}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Has Racks Toggle */}
+            <div className="bg-gray-800 p-4 rounded-lg">
+              <label className="flex items-center justify-between">
+                <div>
+                  <div className="text-white font-medium">Rack Storage</div>
+                  <div className="text-sm text-gray-400">Uses Column/Row/Level system</div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={editingZone.hasRacks}
+                  onChange={(e) => updateZone(editingZone.id, { hasRacks: e.target.checked })}
+                  className="w-6 h-6"
+                />
+              </label>
+            </div>
+
+            {/* Position & Size */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Position & Size (Grid Units)
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">X Position</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={gridWidth - editingZone.width}
+                    value={editingZone.x}
+                    onChange={(e) => updateZone(editingZone.id, { x: parseInt(e.target.value) || 0 })}
+                    className="w-full p-3 bg-gray-800 border border-gray-700 rounded text-white text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Y Position</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max={gridHeight - editingZone.height}
+                    value={editingZone.y}
+                    onChange={(e) => updateZone(editingZone.id, { y: parseInt(e.target.value) || 0 })}
+                    className="w-full p-3 bg-gray-800 border border-gray-700 rounded text-white text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Width</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={gridWidth - editingZone.x}
+                    value={editingZone.width}
+                    onChange={(e) => updateZone(editingZone.id, { width: parseInt(e.target.value) || 1 })}
+                    className="w-full p-3 bg-gray-800 border border-gray-700 rounded text-white text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-400 mb-1">Height</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={gridHeight - editingZone.y}
+                    value={editingZone.height}
+                    onChange={(e) => updateZone(editingZone.id, { height: parseInt(e.target.value) || 1 })}
+                    className="w-full p-3 bg-gray-800 border border-gray-700 rounded text-white text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Preview */}
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Preview
+              </label>
+              <div
+                className="w-full bg-gray-800 rounded-lg border-2 border-gray-700 flex items-center justify-center p-8"
+                style={{
+                  aspectRatio: `${gridWidth}/${gridHeight}`,
+                  position: 'relative'
+                }}
+              >
+                <div
+                  className="rounded-lg flex items-center justify-center"
+                  style={{
+                    backgroundColor: editingZone.color + '40',
+                    border: `3px solid ${editingZone.color}`,
+                    width: '60%',
+                    height: '60%'
+                  }}
+                >
+                  <div className="text-center text-white">
+                    <div className="font-bold">{editingZone.name}</div>
+                    <div className="text-sm mt-1">{editingZone.hasRacks ? '📦 Racks' : '🏢 Floor'}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Delete Button */}
+            <button
+              onClick={() => deleteZone(editingZone.id)}
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-lg transition-colors"
+            >
+              Delete Zone
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Main list view
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-gray-900 rounded-lg p-6 max-w-6xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-white">Warehouse Layout Builder</h2>
+    <div className="fixed inset-0 bg-gray-950 z-50 overflow-y-auto">
+      <div className="min-h-screen p-4">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-white">Edit Layout</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white text-3xl leading-none"
@@ -64,191 +223,46 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Grid Preview */}
-          <div className="lg:col-span-2">
-            <div className="bg-gray-800 rounded-lg p-4 mb-4">
-              <h3 className="text-lg font-semibold text-white mb-3">Layout Preview</h3>
-              <div
-                className="relative w-full bg-gray-700 rounded border-2 border-gray-600"
-                style={{
-                  aspectRatio: `${gridWidth}/${gridHeight}`,
-                  backgroundImage: `
-                    linear-gradient(to right, #4b5563 1px, transparent 1px),
-                    linear-gradient(to bottom, #4b5563 1px, transparent 1px)
-                  `,
-                  backgroundSize: `${100/gridWidth}% ${100/gridHeight}%`
-                }}
-              >
-                {zones.map(zone => (
-                  <div
-                    key={zone.id}
-                    onClick={() => setEditingZone(zone)}
-                    className={`absolute border-2 rounded cursor-pointer transition-all hover:opacity-80 ${
-                      editingZone?.id === zone.id ? 'border-white border-4' : 'border-gray-900'
-                    }`}
-                    style={{
-                      left: `${(zone.x / gridWidth) * 100}%`,
-                      top: `${(zone.y / gridHeight) * 100}%`,
-                      width: `${(zone.width / gridWidth) * 100}%`,
-                      height: `${(zone.height / gridHeight) * 100}%`,
-                      backgroundColor: zone.color + '40',
-                    }}
-                  >
-                    <div className="p-2 text-xs font-semibold text-white truncate">
-                      {zone.name}
-                      <div className="text-[10px] text-gray-300">
-                        {zone.hasRacks ? '📦 Racks' : '🏢 Floor'}
-                      </div>
-                    </div>
+        {/* Zone List */}
+        <div className="space-y-3 mb-6">
+          {zones.map(zone => (
+            <div
+              key={zone.id}
+              onClick={() => setEditingZone(zone)}
+              className="bg-gray-800 p-4 rounded-lg border-2 border-gray-700 active:scale-95 transition-transform cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-12 h-12 rounded-lg flex-shrink-0"
+                  style={{ backgroundColor: zone.color }}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-white truncate">{zone.name}</div>
+                  <div className="text-sm text-gray-400">
+                    {zone.hasRacks ? '📦 Rack Storage' : '🏢 Floor Storage'}
                   </div>
-                ))}
+                </div>
+                <div className="text-gray-400">›</div>
               </div>
             </div>
-
-            <button
-              onClick={addZone}
-              className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded transition-colors"
-            >
-              + Add Zone
-            </button>
-          </div>
-
-          {/* Right: Zone Editor */}
-          <div className="lg:col-span-1">
-            <div className="bg-gray-800 rounded-lg p-4 mb-4">
-              <h3 className="text-lg font-semibold text-white mb-3">
-                {editingZone ? 'Edit Zone' : 'Select a zone to edit'}
-              </h3>
-
-              {editingZone && (
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
-                      Zone Name
-                    </label>
-                    <input
-                      type="text"
-                      value={editingZone.name}
-                      onChange={(e) => updateZone(editingZone.id, { name: e.target.value })}
-                      className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
-                      Color
-                    </label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {colors.map(color => (
-                        <button
-                          key={color}
-                          onClick={() => updateZone(editingZone.id, { color })}
-                          className={`w-full h-8 rounded border-2 ${
-                            editingZone.color === color ? 'border-white' : 'border-gray-600'
-                          }`}
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="flex items-center space-x-2 text-sm text-gray-300">
-                      <input
-                        type="checkbox"
-                        checked={editingZone.hasRacks}
-                        onChange={(e) => updateZone(editingZone.id, { hasRacks: e.target.checked })}
-                        className="rounded"
-                      />
-                      <span>Has Racks (Column/Row/Level)</span>
-                    </label>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">
-                        X Position
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max={gridWidth - editingZone.width}
-                        value={editingZone.x}
-                        onChange={(e) => updateZone(editingZone.id, { x: parseInt(e.target.value) })}
-                        className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">
-                        Y Position
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        max={gridHeight - editingZone.height}
-                        value={editingZone.y}
-                        onChange={(e) => updateZone(editingZone.id, { y: parseInt(e.target.value) })}
-                        className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">
-                        Width
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max={gridWidth - editingZone.x}
-                        value={editingZone.width}
-                        onChange={(e) => updateZone(editingZone.id, { width: parseInt(e.target.value) })}
-                        className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-300 mb-1">
-                        Height
-                      </label>
-                      <input
-                        type="number"
-                        min="1"
-                        max={gridHeight - editingZone.y}
-                        value={editingZone.height}
-                        onChange={(e) => updateZone(editingZone.id, { height: parseInt(e.target.value) })}
-                        className="w-full p-2 bg-gray-700 border border-gray-600 rounded text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => deleteZone(editingZone.id)}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded transition-colors"
-                  >
-                    Delete Zone
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
+          ))}
         </div>
 
-        <div className="flex gap-4 mt-6">
-          <button
-            onClick={handleSave}
-            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded transition-colors"
-          >
-            Save Layout
-          </button>
-          <button
-            onClick={onClose}
-            className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
+        {/* Add Zone Button */}
+        <button
+          onClick={addZone}
+          className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg transition-colors mb-4"
+        >
+          + Add New Zone
+        </button>
+
+        {/* Save Button */}
+        <button
+          onClick={handleSave}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg transition-colors"
+        >
+          Save Layout
+        </button>
       </div>
     </div>
   );
