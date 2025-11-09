@@ -27,9 +27,9 @@ export function EditUnitPage({ unit, onClose }: EditUnitPageProps) {
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Check file size (limit to 2MB)
-      if (file.size > 2 * 1024 * 1024) {
-        alert('Photo must be less than 2MB');
+      // Check file size (limit to 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Photo must be less than 10MB');
         return;
       }
 
