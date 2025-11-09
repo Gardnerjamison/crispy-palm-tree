@@ -3,9 +3,10 @@ import type { Unit } from '../types';
 
 interface UnitListProps {
   onEditUnit: (unit: Unit) => void;
+  onViewUnit: (unit: Unit) => void;
 }
 
-export function UnitList({ onEditUnit }: UnitListProps) {
+export function UnitList({ onEditUnit, onViewUnit }: UnitListProps) {
   const { units, selectedUnit, selectUnit, searchQuery, setSearchQuery } = useWarehouse();
 
   const getLocationText = (unit: Unit) => {
@@ -137,29 +138,54 @@ export function UnitList({ onEditUnit }: UnitListProps) {
                       📍 {getLocationText(unit)}
                     </div>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditUnit(unit);
-                    }}
-                    className="mt-2 w-full text-white text-sm py-1 px-2 rounded font-bold transition-all"
-                    style={{
-                      background: 'linear-gradient(to bottom, #a4d86f 0%, #73b73e 50%, #5a9d2e 100%)',
-                      border: '2px solid #5a9d2e',
-                      borderTopColor: '#d4f0b8',
-                      borderLeftColor: '#d4f0b8',
-                      textShadow: '1px 1px 1px rgba(0,0,0,0.3)',
-                      fontFamily: 'Tahoma, sans-serif'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(to bottom, #b8e384 0%, #86c74d 50%, #6bb03c 100%)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'linear-gradient(to bottom, #a4d86f 0%, #73b73e 50%, #5a9d2e 100%)';
-                    }}
-                  >
-                    Edit
-                  </button>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewUnit(unit);
+                      }}
+                      className="flex-1 text-white text-sm py-1 px-2 rounded font-bold transition-all"
+                      style={{
+                        background: 'linear-gradient(to bottom, #87ceeb 0%, #4169e1 50%, #1e90ff 100%)',
+                        border: '2px solid #1e90ff',
+                        borderTopColor: '#b0d4ff',
+                        borderLeftColor: '#b0d4ff',
+                        textShadow: '1px 1px 1px rgba(0,0,0,0.3)',
+                        fontFamily: 'Tahoma, sans-serif'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'linear-gradient(to bottom, #a0d8f0 0%, #5a7fe6 50%, #3da0ff 100%)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'linear-gradient(to bottom, #87ceeb 0%, #4169e1 50%, #1e90ff 100%)';
+                      }}
+                    >
+                      👁️ View
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditUnit(unit);
+                      }}
+                      className="flex-1 text-white text-sm py-1 px-2 rounded font-bold transition-all"
+                      style={{
+                        background: 'linear-gradient(to bottom, #a4d86f 0%, #73b73e 50%, #5a9d2e 100%)',
+                        border: '2px solid #5a9d2e',
+                        borderTopColor: '#d4f0b8',
+                        borderLeftColor: '#d4f0b8',
+                        textShadow: '1px 1px 1px rgba(0,0,0,0.3)',
+                        fontFamily: 'Tahoma, sans-serif'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'linear-gradient(to bottom, #b8e384 0%, #86c74d 50%, #6bb03c 100%)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'linear-gradient(to bottom, #a4d86f 0%, #73b73e 50%, #5a9d2e 100%)';
+                      }}
+                    >
+                      ✏️ Edit
+                    </button>
+                  </div>
                 </div>
               );
             })

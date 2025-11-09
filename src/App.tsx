@@ -4,6 +4,7 @@ import { WarehouseMap } from './components/WarehouseMap';
 import { UnitList } from './components/UnitList';
 import { AddUnitPage } from './components/AddUnitPage';
 import { EditUnitPage } from './components/EditUnitPage';
+import { UnitDetailPage } from './components/UnitDetailPage';
 import { ExportButton } from './components/ExportButton';
 import { LayoutBuilder } from './components/LayoutBuilder';
 import type { Unit } from './types';
@@ -12,6 +13,7 @@ function AppContent() {
   const [showLayoutBuilder, setShowLayoutBuilder] = useState(false);
   const [showAddUnit, setShowAddUnit] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [viewingUnit, setViewingUnit] = useState<Unit | null>(null);
   const { layout, updateLayout } = useWarehouse();
 
   if (showLayoutBuilder) {
@@ -35,6 +37,19 @@ function AppContent() {
   if (showAddUnit) {
     return (
       <AddUnitPage onClose={() => setShowAddUnit(false)} />
+    );
+  }
+
+  if (viewingUnit) {
+    return (
+      <UnitDetailPage
+        unit={viewingUnit}
+        onClose={() => setViewingUnit(null)}
+        onEdit={() => {
+          setEditingUnit(viewingUnit);
+          setViewingUnit(null);
+        }}
+      />
     );
   }
 
@@ -98,7 +113,10 @@ function AppContent() {
             ✚ Add New Unit
           </button>
           <div className="flex-1 min-h-[400px]">
-            <UnitList onEditUnit={setEditingUnit} />
+            <UnitList
+              onEditUnit={setEditingUnit}
+              onViewUnit={setViewingUnit}
+            />
           </div>
         </div>
       </div>
