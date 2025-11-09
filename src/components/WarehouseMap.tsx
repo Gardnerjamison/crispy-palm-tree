@@ -27,6 +27,36 @@ export function WarehouseMap({ onEditLayout }: WarehouseMapProps) {
     const unitsCount = getUnitsInZone(zone.id).length;
     const isHighlighted = isZoneHighlighted(zone.id);
 
+    // Different styling for rack vs floor zones to show vertical separation
+    const isRackZone = zone.hasRacks;
+
+    // Rack zones: darker, elevated appearance with stronger shadow
+    // Floor zones: lighter, flat appearance
+    const zoneStyle = isRackZone ? {
+      backgroundColor: zone.color + '60', // More opaque for racks
+      border: isHighlighted ? '3px solid #ffcc00' : '3px solid ' + zone.color,
+      borderTopColor: isHighlighted ? '#ffff66' : zone.color,
+      borderLeftColor: isHighlighted ? '#ffff66' : zone.color,
+      boxShadow: isHighlighted
+        ? '0 0 10px rgba(255, 204, 0, 0.8), 4px 4px 8px rgba(0,0,0,0.4), inset -1px -1px 3px rgba(0,0,0,0.2)'
+        : '4px 4px 8px rgba(0,0,0,0.4), inset -1px -1px 3px rgba(0,0,0,0.2)', // Strong shadow = elevated
+      backgroundImage: `repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(0,0,0,0.05) 10px,
+        rgba(0,0,0,0.05) 20px
+      )` // Diagonal lines pattern for racks
+    } : {
+      backgroundColor: zone.color + '30', // More transparent for floor
+      border: isHighlighted ? '3px solid #ffcc00' : '2px solid ' + zone.color,
+      borderTopColor: isHighlighted ? '#ffff66' : zone.color + 'aa',
+      borderLeftColor: isHighlighted ? '#ffff66' : zone.color + 'aa',
+      boxShadow: isHighlighted
+        ? '0 0 8px rgba(255, 204, 0, 0.6), inset 1px 1px 2px rgba(255,255,255,0.3)'
+        : 'inset 1px 1px 2px rgba(255,255,255,0.3)' // Subtle shadow = ground level
+    };
+
     return (
       <div
         key={zone.id}
@@ -36,25 +66,27 @@ export function WarehouseMap({ onEditLayout }: WarehouseMapProps) {
           top: `${(zone.y / layout.gridHeight) * 100}%`,
           width: `${(zone.width / layout.gridWidth) * 100}%`,
           height: `${(zone.height / layout.gridHeight) * 100}%`,
-          backgroundColor: zone.color + '40',
-          border: isHighlighted ? '3px solid #ffcc00' : '2px solid ' + zone.color,
-          borderTopColor: isHighlighted ? '#ffff66' : zone.color + 'aa',
-          borderLeftColor: isHighlighted ? '#ffff66' : zone.color + 'aa',
-          boxShadow: isHighlighted
-            ? '0 0 8px rgba(255, 204, 0, 0.6), inset 1px 1px 2px rgba(255,255,255,0.3)'
-            : 'inset 1px 1px 2px rgba(255,255,255,0.3)',
-          fontFamily: 'Tahoma, sans-serif'
+          fontFamily: 'Tahoma, sans-serif',
+          ...zoneStyle
         }}
       >
         <div className="flex flex-col h-full">
-          <div className="text-xs font-bold" style={{
-            color: '#000080',
-            textShadow: '1px 1px 1px rgba(255,255,255,0.5)'
-          }}>
-            {zone.name}
+          <div className="flex items-center gap-1">
+            <div className="text-xs font-bold" style={{
+              color: '#000080',
+              textShadow: '1px 1px 1px rgba(255,255,255,0.5)'
+            }}>
+              {zone.name}
+            </div>
+            {isRackZone && (
+              <span className="text-xs" style={{ color: '#666' }}>↑</span>
+            )}
           </div>
-          <div className="text-xs" style={{ color: '#333' }}>
-            {zone.hasRacks ? '📦 Racks' : '🏢 Floor'}
+          <div className="text-xs font-semibold" style={{
+            color: isRackZone ? '#8b4513' : '#2d5016',
+            textShadow: '1px 1px 1px rgba(255,255,255,0.7)'
+          }}>
+            {zone.hasRacks ? '📦 Elevated Racks' : '🏢 Ground Floor'}
           </div>
           <div className="mt-auto text-sm font-bold" style={{
             color: '#000080',
