@@ -15,7 +15,23 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
   const [showGridBuilder, setShowGridBuilder] = useState(false);
 
-  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#ec4899', '#84cc16'];
+  // Expanded color palette with various shades for better zone differentiation
+  const colors = [
+    // Blues
+    '#3b82f6', '#1e40af', '#60a5fa', '#0ea5e9',
+    // Greens
+    '#10b981', '#047857', '#34d399', '#84cc16',
+    // Yellows/Oranges
+    '#f59e0b', '#d97706', '#fbbf24', '#fb923c',
+    // Purples/Pinks
+    '#8b5cf6', '#6366f1', '#a855f7', '#ec4899',
+    // Reds
+    '#ef4444', '#dc2626', '#f87171', '#fb7185',
+    // Teals/Cyans
+    '#06b6d4', '#0891b2', '#22d3ee', '#14b8a6',
+    // Grays (for neutral zones)
+    '#6b7280', '#9ca3af', '#4b5563', '#374151'
+  ];
 
   // If showing grid builder
   if (showGridBuilder) {
@@ -98,19 +114,40 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
             {/* Color Picker */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Color
+                Zone Color
               </label>
-              <div className="grid grid-cols-4 gap-3">
+
+              {/* Preset Colors */}
+              <div className="grid grid-cols-7 gap-2 mb-3">
                 {colors.map(color => (
                   <button
                     key={color}
                     onClick={() => updateZone(editingZone.id, { color })}
-                    className={`h-16 rounded-lg border-4 transition-all ${
-                      editingZone.color === color ? 'border-white scale-105' : 'border-gray-700'
+                    className={`h-12 rounded-lg border-3 transition-all ${
+                      editingZone.color === color ? 'border-white ring-2 ring-white' : 'border-gray-700 hover:border-gray-500'
                     }`}
                     style={{ backgroundColor: color }}
+                    title={color}
                   />
                 ))}
+              </div>
+
+              {/* Custom Color Input */}
+              <div className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg">
+                <label className="text-sm text-gray-300 font-medium">Custom Color:</label>
+                <input
+                  type="color"
+                  value={editingZone.color}
+                  onChange={(e) => updateZone(editingZone.id, { color: e.target.value })}
+                  className="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600"
+                />
+                <input
+                  type="text"
+                  value={editingZone.color}
+                  onChange={(e) => updateZone(editingZone.id, { color: e.target.value })}
+                  placeholder="#3b82f6"
+                  className="flex-1 p-2 bg-gray-700 border border-gray-600 rounded text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
             </div>
 
