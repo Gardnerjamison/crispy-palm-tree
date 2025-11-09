@@ -15,22 +15,36 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
   const [showGridBuilder, setShowGridBuilder] = useState(false);
 
-  // Expanded color palette with various shades for better zone differentiation
-  const colors = [
-    // Blues
-    '#3b82f6', '#1e40af', '#60a5fa', '#0ea5e9',
-    // Greens
-    '#10b981', '#047857', '#34d399', '#84cc16',
-    // Yellows/Oranges
-    '#f59e0b', '#d97706', '#fbbf24', '#fb923c',
-    // Purples/Pinks
-    '#8b5cf6', '#6366f1', '#a855f7', '#ec4899',
-    // Reds
-    '#ef4444', '#dc2626', '#f87171', '#fb7185',
-    // Teals/Cyans
-    '#06b6d4', '#0891b2', '#22d3ee', '#14b8a6',
-    // Grays (for neutral zones)
-    '#6b7280', '#9ca3af', '#4b5563', '#374151'
+  // Expanded color palette with descriptive names
+  const colorOptions = [
+    { name: 'Light Blue', value: '#3b82f6' },
+    { name: 'Dark Blue', value: '#1e40af' },
+    { name: 'Sky Blue', value: '#60a5fa' },
+    { name: 'Cyan', value: '#0ea5e9' },
+    { name: 'Green', value: '#10b981' },
+    { name: 'Dark Green', value: '#047857' },
+    { name: 'Light Green', value: '#34d399' },
+    { name: 'Lime', value: '#84cc16' },
+    { name: 'Yellow', value: '#f59e0b' },
+    { name: 'Gold', value: '#d97706' },
+    { name: 'Light Yellow', value: '#fbbf24' },
+    { name: 'Orange', value: '#fb923c' },
+    { name: 'Purple', value: '#8b5cf6' },
+    { name: 'Indigo', value: '#6366f1' },
+    { name: 'Violet', value: '#a855f7' },
+    { name: 'Pink', value: '#ec4899' },
+    { name: 'Red', value: '#ef4444' },
+    { name: 'Dark Red', value: '#dc2626' },
+    { name: 'Light Red', value: '#f87171' },
+    { name: 'Rose', value: '#fb7185' },
+    { name: 'Teal', value: '#06b6d4' },
+    { name: 'Dark Teal', value: '#0891b2' },
+    { name: 'Aqua', value: '#22d3ee' },
+    { name: 'Turquoise', value: '#14b8a6' },
+    { name: 'Gray', value: '#6b7280' },
+    { name: 'Light Gray', value: '#9ca3af' },
+    { name: 'Dark Gray', value: '#4b5563' },
+    { name: 'Charcoal', value: '#374151' }
   ];
 
   // If showing grid builder
@@ -52,7 +66,7 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
     const newZone: Zone = {
       id: `z${Date.now()}`,
       name: `Zone ${zones.length + 1}`,
-      color: colors[zones.length % colors.length],
+      color: colorOptions[zones.length % colorOptions.length].value,
       hasRacks: false,
       x: 0,
       y: 0,
@@ -111,42 +125,29 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
               />
             </div>
 
-            {/* Color Picker */}
+            {/* Color Selector */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Zone Color
               </label>
-
-              {/* Preset Colors */}
-              <div className="grid grid-cols-7 gap-2 mb-3">
-                {colors.map(color => (
-                  <button
-                    key={color}
-                    onClick={() => updateZone(editingZone.id, { color })}
-                    className={`h-12 rounded-lg border-3 transition-all ${
-                      editingZone.color === color ? 'border-white ring-2 ring-white' : 'border-gray-700 hover:border-gray-500'
-                    }`}
-                    style={{ backgroundColor: color }}
-                    title={color}
-                  />
-                ))}
-              </div>
-
-              {/* Custom Color Input */}
-              <div className="flex items-center gap-3 p-3 bg-gray-800 rounded-lg">
-                <label className="text-sm text-gray-300 font-medium">Custom Color:</label>
-                <input
-                  type="color"
+              <div className="flex items-center gap-3">
+                {/* Dropdown */}
+                <select
                   value={editingZone.color}
                   onChange={(e) => updateZone(editingZone.id, { color: e.target.value })}
-                  className="w-16 h-10 rounded cursor-pointer bg-gray-700 border-2 border-gray-600"
-                />
-                <input
-                  type="text"
-                  value={editingZone.color}
-                  onChange={(e) => updateZone(editingZone.id, { color: e.target.value })}
-                  placeholder="#3b82f6"
-                  className="flex-1 p-2 bg-gray-700 border border-gray-600 rounded text-white text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex-1 p-4 bg-gray-800 border border-gray-700 rounded-lg text-white text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {colorOptions.map(option => (
+                    <option key={option.value} value={option.value}>
+                      {option.name}
+                    </option>
+                  ))}
+                </select>
+                {/* Color Preview */}
+                <div
+                  className="w-16 h-16 rounded-lg border-2 border-gray-700"
+                  style={{ backgroundColor: editingZone.color }}
+                  title={editingZone.color}
                 />
               </div>
             </div>
