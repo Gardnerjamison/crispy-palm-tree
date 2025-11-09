@@ -135,7 +135,7 @@ export function UnitList({ onEditUnit, onViewUnit }: UnitListProps) {
                       color: isSelected ? '#e0e0e0' : '#666',
                       fontFamily: 'Tahoma, sans-serif'
                     }}>
-                      📍 {getLocationText(unit)}
+                      {getLocationText(unit)}
                     </div>
                   </div>
                   <div className="mt-2 flex gap-2">
@@ -160,7 +160,7 @@ export function UnitList({ onEditUnit, onViewUnit }: UnitListProps) {
                         e.currentTarget.style.background = 'linear-gradient(to bottom, #87ceeb 0%, #4169e1 50%, #1e90ff 100%)';
                       }}
                     >
-                      👁️ View
+                      View
                     </button>
                     <button
                       onClick={(e) => {
@@ -183,7 +183,7 @@ export function UnitList({ onEditUnit, onViewUnit }: UnitListProps) {
                         e.currentTarget.style.background = 'linear-gradient(to bottom, #a4d86f 0%, #73b73e 50%, #5a9d2e 100%)';
                       }}
                     >
-                      ✏️ Edit
+                      Edit
                     </button>
                   </div>
                 </div>

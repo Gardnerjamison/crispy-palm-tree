@@ -320,7 +320,6 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
           onClick={() => setShowGridBuilder(true)}
           className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-colors mb-6 flex items-center justify-center gap-2"
         >
-          <span className="text-xl">🎨</span>
           Visual Grid Builder - Draw Zones
         </button>
 
@@ -340,7 +339,7 @@ export function LayoutBuilder({ zones: initialZones, gridWidth, gridHeight, onSa
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-white truncate">{zone.name}</div>
                   <div className="text-sm text-gray-400">
-                    {zone.hasRacks ? '📦 Rack Storage' : '🏢 Floor Storage'}
+                    {zone.hasRacks ? 'Rack Storage' : 'Floor Storage'}
                   </div>
                 </div>
                 <div className="text-gray-400">›</div>

@@ -271,7 +271,7 @@ export function GridBuilder({ zones: initialZones, onSave, onClose }: GridBuilde
                   <div>
                     <div className="text-white font-medium">{zone.name}</div>
                     <div className="text-xs text-gray-400">
-                      {zone.hasRacks ? '📦 Racks' : '🏢 Floor'} • {zone.width}×{zone.height}
+                      {zone.hasRacks ? 'Racks' : 'Floor'} • {zone.width}×{zone.height}
                     </div>
                   </div>
                 </div>

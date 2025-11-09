@@ -100,7 +100,6 @@ export function EditUnitPage({ unit, onClose }: EditUnitPageProps) {
           background: 'linear-gradient(to bottom, #0054e3 0%, #3d95d9 50%, #0054e3 100%)'
         }}>
           <div className="flex items-center gap-2">
-            <span className="text-lg">📦</span>
             <h2 className="text-base font-bold text-white" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>
               Edit Unit
             </h2>
@@ -170,7 +169,6 @@ export function EditUnitPage({ unit, onClose }: EditUnitPageProps) {
                     className="hidden"
                   />
                   <div className="flex flex-col items-center justify-center h-full" style={{ color: '#666' }}>
-                    <span className="text-4xl mb-2">📷</span>
                     <span className="text-sm" style={{ fontFamily: 'Tahoma, sans-serif' }}>Tap to add photo</span>
                   </div>
                 </label>

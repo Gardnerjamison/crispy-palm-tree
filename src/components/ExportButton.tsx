@@ -79,7 +79,7 @@ export function ExportButton() {
         e.currentTarget.style.background = 'linear-gradient(to bottom, #a4d86f 0%, #73b73e 50%, #5a9d2e 100%)';
       }}
     >
-      📊 Export
+      Export
     </button>
   );
 }

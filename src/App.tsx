@@ -72,7 +72,6 @@ function AppContent() {
         }}>
           <div className="flex items-center justify-between p-3">
             <div className="flex items-center gap-2">
-              <span className="text-2xl">📦</span>
               <h1 className="text-xl font-bold text-white" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>
                 Warehouse Manager
               </h1>
@@ -110,7 +109,7 @@ function AppContent() {
               e.currentTarget.style.background = 'linear-gradient(to bottom, #a4d86f 0%, #73b73e 50%, #5a9d2e 100%)';
             }}
           >
-            ✚ Add New Unit
+            Add New Unit
           </button>
           <div className="flex-1 min-h-[400px]">
             <UnitList

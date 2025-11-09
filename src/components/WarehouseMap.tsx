@@ -86,7 +86,7 @@ export function WarehouseMap({ onEditLayout }: WarehouseMapProps) {
             color: isRackZone ? '#8b4513' : '#2d5016',
             textShadow: '1px 1px 1px rgba(255,255,255,0.7)'
           }}>
-            {zone.hasRacks ? '📦 Elevated Racks' : '🏢 Ground Floor'}
+            {zone.hasRacks ? 'Elevated Racks' : 'Ground Floor'}
           </div>
           <div className="mt-auto text-sm font-bold" style={{
             color: '#000080',
@@ -131,7 +131,7 @@ export function WarehouseMap({ onEditLayout }: WarehouseMapProps) {
             e.currentTarget.style.background = 'linear-gradient(to bottom, #d4a5ff 0%, #b366ff 50%, #9933ff 100%)';
           }}
         >
-          🏗️ Edit Layout
+          Edit Layout
         </button>
       </div>
 

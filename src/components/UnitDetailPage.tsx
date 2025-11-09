@@ -73,7 +73,6 @@ export function UnitDetailPage({ unit, onClose, onEdit }: UnitDetailPageProps) {
           background: 'linear-gradient(to bottom, #0054e3 0%, #3d95d9 50%, #0054e3 100%)'
         }}>
           <div className="flex items-center gap-2">
-            <span className="text-lg">📦</span>
             <h2 className="text-base font-bold text-white" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>
               Unit Details
             </h2>
@@ -177,7 +176,7 @@ export function UnitDetailPage({ unit, onClose, onEdit }: UnitDetailPageProps) {
                 Location
               </label>
               <div style={fieldStyle}>
-                📍 {getLocationText()}
+                {getLocationText()}
               </div>
             </div>
 
@@ -222,7 +221,7 @@ export function UnitDetailPage({ unit, onClose, onEdit }: UnitDetailPageProps) {
                 e.currentTarget.style.background = 'linear-gradient(to bottom, #a4d86f 0%, #73b73e 50%, #5a9d2e 100%)';
               }}
             >
-              ✏️ Edit Unit
+              Edit Unit
             </button>
             <button
               onClick={onClose}
