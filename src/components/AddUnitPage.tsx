@@ -20,6 +20,7 @@ export function AddUnitPage({ onClose }: AddUnitPageProps) {
   const [row, setRow] = useState('1');
   const [level, setLevel] = useState('1');
   const [photoUrl, setPhotoUrl] = useState('');
+  const [addedBy, setAddedBy] = useState('');
 
   const selectedZone = layout.zones.find(z => z.id === zone);
 
@@ -47,6 +48,7 @@ export function AddUnitPage({ onClose }: AddUnitPageProps) {
       ? { type: 'rack', zone, column, row: parseInt(row), level: parseInt(level) }
       : { type: 'floor', zone };
 
+    const now = new Date().toISOString();
     const newUnit: Unit = {
       id: Date.now().toString(),
       serialNumber,
@@ -57,6 +59,9 @@ export function AddUnitPage({ onClose }: AddUnitPageProps) {
       equipmentNumber: equipmentNumber || undefined,
       fleetNumber: fleetNumber || undefined,
       photoUrl: photoUrl || undefined,
+      createdDate: now,
+      updatedDate: now,
+      addedBy: addedBy || undefined,
     };
 
     addUnit(newUnit);
@@ -212,6 +217,21 @@ export function AddUnitPage({ onClose }: AddUnitPageProps) {
                 className="w-full p-3 rounded text-lg"
                 style={inputStyle}
                 placeholder="Fleet number (if rental)"
+              />
+            </div>
+
+            {/* Added By */}
+            <div>
+              <label className="block text-sm mb-2" style={labelStyle}>
+                Added By (optional)
+              </label>
+              <input
+                type="text"
+                value={addedBy}
+                onChange={(e) => setAddedBy(e.target.value)}
+                className="w-full p-3 rounded text-lg"
+                style={inputStyle}
+                placeholder="Your name"
               />
             </div>
 

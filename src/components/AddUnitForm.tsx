@@ -35,6 +35,7 @@ export function AddUnitForm() {
       ? { type: 'floor', zone }
       : { type: 'rack', zone, column, row: parseInt(row), level: parseInt(level) };
 
+    const now = new Date().toISOString();
     const newUnit: Unit = {
       id: Date.now().toString(),
       serialNumber,
@@ -42,6 +43,8 @@ export function AddUnitForm() {
       model,
       status,
       location,
+      createdDate: now,
+      updatedDate: now,
     };
 
     addUnit(newUnit);

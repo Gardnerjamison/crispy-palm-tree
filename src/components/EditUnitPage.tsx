@@ -57,6 +57,7 @@ export function EditUnitPage({ unit, onClose }: EditUnitPageProps) {
       equipmentNumber: equipmentNumber || undefined,
       fleetNumber: fleetNumber || undefined,
       photoUrl: photoUrl || undefined,
+      updatedDate: new Date().toISOString(),
     });
 
     onClose();

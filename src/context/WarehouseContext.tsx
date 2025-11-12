@@ -38,7 +38,18 @@ export function WarehouseProvider({ children }: { children: ReactNode }) {
   });
   const [units, setUnits] = useState<Unit[]>(() => {
     const saved = localStorage.getItem('warehouse-units');
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+
+    // Migrate old units to include timestamps if missing
+    const parsedUnits = JSON.parse(saved);
+    return parsedUnits.map((unit: any) => {
+      const now = new Date().toISOString();
+      return {
+        ...unit,
+        createdDate: unit.createdDate || now,
+        updatedDate: unit.updatedDate || now,
+      };
+    });
   });
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [searchQuery, setSearchQuery] = useState('');

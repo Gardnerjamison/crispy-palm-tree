@@ -21,6 +21,25 @@ export function UnitDetailPage({ unit, onClose, onEdit }: UnitDetailPageProps) {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const getDaysInSystem = () => {
+    if (!unit.createdDate) return null;
+    const created = new Date(unit.createdDate);
+    const now = new Date();
+    const days = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+    return days;
+  };
+
   const getStatusColor = () => {
     switch (unit.status) {
       case 'In Stock':
@@ -199,6 +218,47 @@ export function UnitDetailPage({ unit, onClose, onEdit }: UnitDetailPageProps) {
                 </div>
               </div>
             </div>
+
+            {/* Timestamps Section */}
+            {unit.createdDate && (
+              <div className="pt-4 mt-4" style={{
+                borderTop: '2px solid #7f9db9'
+              }}>
+                <h4 className="text-sm font-bold mb-3" style={{ color: '#000080', fontFamily: 'Tahoma, sans-serif' }}>
+                  Tracking Information
+                </h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block" style={labelStyle}>
+                      Date Added
+                    </label>
+                    <div style={fieldStyle}>
+                      {formatDate(unit.createdDate)} ({getDaysInSystem()} days ago)
+                    </div>
+                  </div>
+                  {unit.addedBy && (
+                    <div>
+                      <label className="block" style={labelStyle}>
+                        Added By
+                      </label>
+                      <div style={fieldStyle}>
+                        {unit.addedBy}
+                      </div>
+                    </div>
+                  )}
+                  {unit.updatedDate && unit.updatedDate !== unit.createdDate && (
+                    <div>
+                      <label className="block" style={labelStyle}>
+                        Last Updated
+                      </label>
+                      <div style={fieldStyle}>
+                        {formatDate(unit.updatedDate)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

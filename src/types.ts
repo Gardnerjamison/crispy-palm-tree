@@ -8,6 +8,9 @@ export interface Unit {
   equipmentNumber?: string;  // Company EQ number
   fleetNumber?: string;       // Rental fleet number
   photoUrl?: string;          // Photo (base64 or URL)
+  createdDate: string;        // ISO date string
+  updatedDate: string;        // ISO date string
+  addedBy?: string;           // User name who added the unit
 }
 
 export interface FloorLocation {

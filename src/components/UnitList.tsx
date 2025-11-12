@@ -17,6 +17,14 @@ export function UnitList({ onEditUnit, onViewUnit }: UnitListProps) {
     }
   };
 
+  const getDaysInSystem = (unit: Unit) => {
+    if (!unit.createdDate) return null;
+    const created = new Date(unit.createdDate);
+    const now = new Date();
+    const days = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24));
+    return days;
+  };
+
   const filteredUnits = units.filter(unit => {
     const query = searchQuery.toLowerCase();
     return (
@@ -137,6 +145,15 @@ export function UnitList({ onEditUnit, onViewUnit }: UnitListProps) {
                     }}>
                       {getLocationText(unit)}
                     </div>
+                    {unit.createdDate && (
+                      <div className="text-xs mt-1" style={{
+                        color: isSelected ? '#d0d0d0' : '#888',
+                        fontFamily: 'Tahoma, sans-serif'
+                      }}>
+                        Added {getDaysInSystem(unit)} days ago
+                        {unit.addedBy && ` by ${unit.addedBy}`}
+                      </div>
+                    )}
                   </div>
                   <div className="mt-2 flex gap-2">
                     <button
