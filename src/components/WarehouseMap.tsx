@@ -18,6 +18,21 @@ export function WarehouseMap({ onEditLayout }: WarehouseMapProps) {
     });
   };
 
+  const getZoneValue = (zoneId: string) => {
+    const zoneUnits = getUnitsInZone(zoneId);
+    return zoneUnits.reduce((sum, unit) => sum + (unit.purchasePrice || 0), 0);
+  };
+
+  const formatCurrency = (value: number) => {
+    if (value === 0) return null;
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
+
   const isZoneHighlighted = (zoneId: string) => {
     if (!selectedUnit) return false;
     return selectedUnit.location.zone === zoneId;
@@ -25,6 +40,7 @@ export function WarehouseMap({ onEditLayout }: WarehouseMapProps) {
 
   const renderZone = (zone: Zone) => {
     const unitsCount = getUnitsInZone(zone.id).length;
+    const zoneValue = getZoneValue(zone.id);
     const isHighlighted = isZoneHighlighted(zone.id);
 
     // Different styling for rack vs floor zones to show vertical separation
@@ -88,11 +104,21 @@ export function WarehouseMap({ onEditLayout }: WarehouseMapProps) {
           }}>
             {zone.hasRacks ? 'Elevated Racks' : 'Ground Floor'}
           </div>
-          <div className="mt-auto text-sm font-bold" style={{
-            color: '#000080',
-            textShadow: '1px 1px 1px rgba(255,255,255,0.5)'
-          }}>
-            {unitsCount} {unitsCount === 1 ? 'unit' : 'units'}
+          <div className="mt-auto">
+            <div className="text-sm font-bold" style={{
+              color: '#000080',
+              textShadow: '1px 1px 1px rgba(255,255,255,0.5)'
+            }}>
+              {unitsCount} {unitsCount === 1 ? 'unit' : 'units'}
+            </div>
+            {zoneValue > 0 && (
+              <div className="text-xs font-semibold" style={{
+                color: '#006400',
+                textShadow: '1px 1px 1px rgba(255,255,255,0.7)'
+              }}>
+                {formatCurrency(zoneValue)}
+              </div>
+            )}
           </div>
         </div>
       </div>

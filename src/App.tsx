@@ -7,6 +7,7 @@ import { EditUnitPage } from './components/EditUnitPage';
 import { UnitDetailPage } from './components/UnitDetailPage';
 import { ExportButton } from './components/ExportButton';
 import { LayoutBuilder } from './components/LayoutBuilder';
+import { InventoryValue } from './components/InventoryValue';
 import type { Unit } from './types';
 
 function AppContent() {
@@ -92,6 +93,7 @@ function AppContent() {
 
         {/* Right column: Units list */}
         <div className="lg:col-span-1 flex flex-col gap-4">
+          <InventoryValue />
           <button
             onClick={() => setShowAddUnit(true)}
             className="w-full text-white font-bold py-4 px-6 rounded-lg transition-all shadow-lg hover:shadow-xl"

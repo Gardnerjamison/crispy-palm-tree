@@ -21,6 +21,9 @@ export function AddUnitPage({ onClose }: AddUnitPageProps) {
   const [level, setLevel] = useState('1');
   const [photoUrl, setPhotoUrl] = useState('');
   const [addedBy, setAddedBy] = useState('');
+  const [purchasePrice, setPurchasePrice] = useState('');
+  const [purchaseDate, setPurchaseDate] = useState('');
+  const [supplier, setSupplier] = useState('');
 
   const selectedZone = layout.zones.find(z => z.id === zone);
 
@@ -62,6 +65,9 @@ export function AddUnitPage({ onClose }: AddUnitPageProps) {
       createdDate: now,
       updatedDate: now,
       addedBy: addedBy || undefined,
+      purchasePrice: purchasePrice ? parseFloat(purchasePrice) : undefined,
+      purchaseDate: purchaseDate || undefined,
+      supplier: supplier || undefined,
     };
 
     addUnit(newUnit);
@@ -233,6 +239,66 @@ export function AddUnitPage({ onClose }: AddUnitPageProps) {
                 style={inputStyle}
                 placeholder="Your name"
               />
+            </div>
+
+            {/* Financial Information Section */}
+            <div className="p-4 rounded" style={{
+              background: '#d4d0c8',
+              border: '2px solid #7f9db9',
+              borderTopColor: '#003c74',
+              borderLeftColor: '#003c74',
+            }}>
+              <h3 className="font-bold mb-3" style={{ color: '#000080', fontFamily: 'Tahoma, sans-serif' }}>
+                Financial Information (optional)
+              </h3>
+
+              <div className="space-y-3">
+                {/* Purchase Price */}
+                <div>
+                  <label className="block text-xs mb-1" style={{ ...labelStyle, fontSize: '11px' }}>
+                    Purchase Price ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={purchasePrice}
+                    onChange={(e) => setPurchasePrice(e.target.value)}
+                    className="w-full p-2 rounded text-lg"
+                    style={inputStyle}
+                    placeholder="0.00"
+                  />
+                </div>
+
+                {/* Purchase Date */}
+                <div>
+                  <label className="block text-xs mb-1" style={{ ...labelStyle, fontSize: '11px' }}>
+                    Purchase Date
+                  </label>
+                  <input
+                    type="date"
+                    value={purchaseDate}
+                    onChange={(e) => setPurchaseDate(e.target.value)}
+                    className="w-full p-2 rounded text-lg"
+                    style={inputStyle}
+                  />
+                </div>
+
+                {/* Supplier */}
+                <div>
+                  <label className="block text-xs mb-1" style={{ ...labelStyle, fontSize: '11px' }}>
+                    Supplier/Vendor
+                  </label>
+                  <input
+                    type="text"
+                    value={supplier}
+                    onChange={(e) => setSupplier(e.target.value)}
+                    className="w-full p-2 rounded text-lg"
+                    style={inputStyle}
+                    placeholder="Supplier name"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Brand and Model */}

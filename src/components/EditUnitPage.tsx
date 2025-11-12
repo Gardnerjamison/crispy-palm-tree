@@ -21,6 +21,9 @@ export function EditUnitPage({ unit, onClose }: EditUnitPageProps) {
   const [row, setRow] = useState(unit.location.type === 'rack' ? unit.location.row.toString() : '1');
   const [level, setLevel] = useState(unit.location.type === 'rack' ? unit.location.level.toString() : '1');
   const [photoUrl, setPhotoUrl] = useState(unit.photoUrl || '');
+  const [purchasePrice, setPurchasePrice] = useState(unit.purchasePrice?.toString() || '');
+  const [purchaseDate, setPurchaseDate] = useState(unit.purchaseDate || '');
+  const [supplier, setSupplier] = useState(unit.supplier || '');
 
   const selectedZone = layout.zones.find(z => z.id === zone);
 
@@ -57,6 +60,9 @@ export function EditUnitPage({ unit, onClose }: EditUnitPageProps) {
       equipmentNumber: equipmentNumber || undefined,
       fleetNumber: fleetNumber || undefined,
       photoUrl: photoUrl || undefined,
+      purchasePrice: purchasePrice ? parseFloat(purchasePrice) : undefined,
+      purchaseDate: purchaseDate || undefined,
+      supplier: supplier || undefined,
       updatedDate: new Date().toISOString(),
     });
 
@@ -291,6 +297,66 @@ export function EditUnitPage({ unit, onClose }: EditUnitPageProps) {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* Financial Information Section */}
+            <div className="p-4 rounded" style={{
+              background: '#d4d0c8',
+              border: '2px solid #7f9db9',
+              borderTopColor: '#003c74',
+              borderLeftColor: '#003c74',
+            }}>
+              <h3 className="font-bold mb-3" style={{ color: '#000080', fontFamily: 'Tahoma, sans-serif' }}>
+                Financial Information (optional)
+              </h3>
+
+              <div className="space-y-3">
+                {/* Purchase Price */}
+                <div>
+                  <label className="block text-xs mb-1" style={{ ...labelStyle, fontSize: '11px' }}>
+                    Purchase Price ($)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={purchasePrice}
+                    onChange={(e) => setPurchasePrice(e.target.value)}
+                    className="w-full p-2 rounded text-lg"
+                    style={inputStyle}
+                    placeholder="0.00"
+                  />
+                </div>
+
+                {/* Purchase Date */}
+                <div>
+                  <label className="block text-xs mb-1" style={{ ...labelStyle, fontSize: '11px' }}>
+                    Purchase Date
+                  </label>
+                  <input
+                    type="date"
+                    value={purchaseDate}
+                    onChange={(e) => setPurchaseDate(e.target.value)}
+                    className="w-full p-2 rounded text-lg"
+                    style={inputStyle}
+                  />
+                </div>
+
+                {/* Supplier */}
+                <div>
+                  <label className="block text-xs mb-1" style={{ ...labelStyle, fontSize: '11px' }}>
+                    Supplier/Vendor
+                  </label>
+                  <input
+                    type="text"
+                    value={supplier}
+                    onChange={(e) => setSupplier(e.target.value)}
+                    className="w-full p-2 rounded text-lg"
+                    style={inputStyle}
+                    placeholder="Supplier name"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Rack Location (if applicable) */}

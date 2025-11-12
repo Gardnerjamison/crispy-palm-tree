@@ -11,6 +11,9 @@ export interface Unit {
   createdDate: string;        // ISO date string
   updatedDate: string;        // ISO date string
   addedBy?: string;           // User name who added the unit
+  purchasePrice?: number;     // Purchase price in dollars
+  purchaseDate?: string;      // ISO date string
+  supplier?: string;          // Supplier/vendor name
 }
 
 export interface FloorLocation {

@@ -24,6 +24,8 @@ export function ExportButton() {
       'Serial Number': unit.serialNumber,
       'Brand': unit.brand,
       'Model': unit.model,
+      'Equipment Number': unit.equipmentNumber || '',
+      'Fleet Number': unit.fleetNumber || '',
       'Status': unit.status,
       'Location Type': unit.location.type === 'floor' ? 'Floor' : 'Rack',
       'Zone': unit.location.zone,
@@ -31,6 +33,11 @@ export function ExportButton() {
       'Row': unit.location.type === 'rack' ? unit.location.row : '',
       'Level': unit.location.type === 'rack' ? unit.location.level : '',
       'Full Location': getLocationText(unit),
+      'Purchase Price': unit.purchasePrice || '',
+      'Purchase Date': unit.purchaseDate || '',
+      'Supplier': unit.supplier || '',
+      'Date Added': unit.createdDate || '',
+      'Added By': unit.addedBy || '',
     }));
 
     // Create workbook and worksheet

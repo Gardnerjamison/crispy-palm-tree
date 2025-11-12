@@ -40,6 +40,13 @@ export function UnitDetailPage({ unit, onClose, onEdit }: UnitDetailPageProps) {
     return days;
   };
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(value);
+  };
+
   const getStatusColor = () => {
     switch (unit.status) {
       case 'In Stock':
@@ -218,6 +225,49 @@ export function UnitDetailPage({ unit, onClose, onEdit }: UnitDetailPageProps) {
                 </div>
               </div>
             </div>
+
+            {/* Financial Information Section */}
+            {(unit.purchasePrice || unit.purchaseDate || unit.supplier) && (
+              <div className="pt-4 mt-4" style={{
+                borderTop: '2px solid #7f9db9'
+              }}>
+                <h4 className="text-sm font-bold mb-3" style={{ color: '#000080', fontFamily: 'Tahoma, sans-serif' }}>
+                  Financial Information
+                </h4>
+                <div className="space-y-3">
+                  {unit.purchasePrice && (
+                    <div>
+                      <label className="block" style={labelStyle}>
+                        Purchase Price
+                      </label>
+                      <div style={fieldStyle}>
+                        {formatCurrency(unit.purchasePrice)}
+                      </div>
+                    </div>
+                  )}
+                  {unit.purchaseDate && (
+                    <div>
+                      <label className="block" style={labelStyle}>
+                        Purchase Date
+                      </label>
+                      <div style={fieldStyle}>
+                        {formatDate(unit.purchaseDate)}
+                      </div>
+                    </div>
+                  )}
+                  {unit.supplier && (
+                    <div>
+                      <label className="block" style={labelStyle}>
+                        Supplier/Vendor
+                      </label>
+                      <div style={fieldStyle}>
+                        {unit.supplier}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Timestamps Section */}
             {unit.createdDate && (
