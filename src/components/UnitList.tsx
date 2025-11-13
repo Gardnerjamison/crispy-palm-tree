@@ -7,7 +7,20 @@ interface UnitListProps {
 }
 
 export function UnitList({ onEditUnit, onViewUnit }: UnitListProps) {
-  const { units, selectedUnit, selectUnit, searchQuery, setSearchQuery } = useWarehouse();
+  const {
+    units,
+    selectedUnit,
+    selectUnit,
+    searchQuery,
+    setSearchQuery,
+    layout,
+    filterStatus,
+    setFilterStatus,
+    filterZone,
+    setFilterZone,
+    sortBy,
+    setSortBy
+  } = useWarehouse();
 
   const getLocationText = (unit: Unit) => {
     if (unit.location.type === 'floor') {
@@ -25,14 +38,46 @@ export function UnitList({ onEditUnit, onViewUnit }: UnitListProps) {
     return days;
   };
 
-  const filteredUnits = units.filter(unit => {
-    const query = searchQuery.toLowerCase();
-    return (
-      unit.serialNumber.toLowerCase().includes(query) ||
-      unit.brand.toLowerCase().includes(query) ||
-      unit.model.toLowerCase().includes(query)
-    );
-  });
+  const filteredUnits = units
+    .filter(unit => {
+      // Apply status filter
+      if (filterStatus && unit.status !== filterStatus) {
+        return false;
+      }
+
+      // Apply zone filter
+      if (filterZone && unit.location.zone !== filterZone) {
+        return false;
+      }
+
+      // Apply search filter
+      const query = searchQuery.toLowerCase();
+      return (
+        unit.serialNumber.toLowerCase().includes(query) ||
+        unit.brand.toLowerCase().includes(query) ||
+        unit.model.toLowerCase().includes(query) ||
+        (unit.equipmentNumber?.toLowerCase().includes(query) ?? false) ||
+        (unit.fleetNumber?.toLowerCase().includes(query) ?? false)
+      );
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'dateAdded':
+          // Newest first
+          return new Date(b.createdDate || 0).getTime() - new Date(a.createdDate || 0).getTime();
+        case 'daysInSystem':
+          // Oldest first
+          return new Date(a.createdDate || 0).getTime() - new Date(b.createdDate || 0).getTime();
+        case 'brand':
+          // A-Z
+          return a.brand.localeCompare(b.brand);
+        case 'value':
+          // Highest value first
+          return (b.purchasePrice || 0) - (a.purchasePrice || 0);
+        default:
+          return 0;
+      }
+    });
 
   const getStatusColor = (status: Unit['status']) => {
     switch (status) {
@@ -66,10 +111,10 @@ export function UnitList({ onEditUnit, onViewUnit }: UnitListProps) {
       <div className="p-3 flex-1 flex flex-col">
         <input
           type="text"
-          placeholder="Search serial, brand, or model..."
+          placeholder="Search serial, brand, model, EQ#, fleet#..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full p-2 mb-3 rounded"
+          className="w-full p-2 mb-2 rounded"
           style={{
             background: 'white',
             border: '2px solid #7f9db9',
@@ -78,6 +123,69 @@ export function UnitList({ onEditUnit, onViewUnit }: UnitListProps) {
             boxShadow: 'inset 1px 1px 2px rgba(0,0,0,0.1)'
           }}
         />
+
+        {/* Filters and Sort */}
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="p-2 rounded text-xs"
+            style={{
+              background: 'white',
+              border: '2px solid #7f9db9',
+              borderTopColor: '#003c74',
+              borderLeftColor: '#003c74',
+              boxShadow: 'inset 1px 1px 2px rgba(0,0,0,0.1)',
+              fontFamily: 'Tahoma, sans-serif'
+            }}
+          >
+            <option value="">All Status</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Sold-Prep">Sold - Prep</option>
+            <option value="Sold-Ready">Sold - Ready</option>
+            <option value="On Hold">On Hold</option>
+          </select>
+
+          <select
+            value={filterZone}
+            onChange={(e) => setFilterZone(e.target.value)}
+            className="p-2 rounded text-xs"
+            style={{
+              background: 'white',
+              border: '2px solid #7f9db9',
+              borderTopColor: '#003c74',
+              borderLeftColor: '#003c74',
+              boxShadow: 'inset 1px 1px 2px rgba(0,0,0,0.1)',
+              fontFamily: 'Tahoma, sans-serif'
+            }}
+          >
+            <option value="">All Zones</option>
+            {layout.zones.map(zone => (
+              <option key={zone.id} value={zone.id}>
+                {zone.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="p-2 rounded text-xs"
+            style={{
+              background: 'white',
+              border: '2px solid #7f9db9',
+              borderTopColor: '#003c74',
+              borderLeftColor: '#003c74',
+              boxShadow: 'inset 1px 1px 2px rgba(0,0,0,0.1)',
+              fontFamily: 'Tahoma, sans-serif'
+            }}
+          >
+            <option value="dateAdded">Newest First</option>
+            <option value="daysInSystem">Oldest First</option>
+            <option value="brand">Brand (A-Z)</option>
+            <option value="value">Highest Value</option>
+          </select>
+        </div>
 
         <div className="flex-1 overflow-y-auto space-y-2" style={{
           background: 'white',

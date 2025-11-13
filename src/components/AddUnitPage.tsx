@@ -24,6 +24,8 @@ export function AddUnitPage({ onClose }: AddUnitPageProps) {
   const [purchasePrice, setPurchasePrice] = useState('');
   const [purchaseDate, setPurchaseDate] = useState('');
   const [supplier, setSupplier] = useState('');
+  const [notes, setNotes] = useState('');
+  const [condition, setCondition] = useState<Unit['condition']>('Good');
 
   const selectedZone = layout.zones.find(z => z.id === zone);
 
@@ -68,6 +70,8 @@ export function AddUnitPage({ onClose }: AddUnitPageProps) {
       purchasePrice: purchasePrice ? parseFloat(purchasePrice) : undefined,
       purchaseDate: purchaseDate || undefined,
       supplier: supplier || undefined,
+      notes: notes || undefined,
+      condition: condition || undefined,
     };
 
     addUnit(newUnit);
@@ -350,6 +354,39 @@ export function AddUnitPage({ onClose }: AddUnitPageProps) {
                 <option value="Sold-Ready">Sold - Ready</option>
                 <option value="On Hold">On Hold</option>
               </select>
+            </div>
+
+            {/* Condition */}
+            <div>
+              <label className="block text-sm mb-2" style={labelStyle}>
+                Condition
+              </label>
+              <select
+                value={condition}
+                onChange={(e) => setCondition(e.target.value as Unit['condition'])}
+                className="w-full p-3 rounded text-lg"
+                style={inputStyle}
+              >
+                <option value="Excellent">Excellent</option>
+                <option value="Good">Good</option>
+                <option value="Fair">Fair</option>
+                <option value="Poor">Poor</option>
+              </select>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm mb-2" style={labelStyle}>
+                Notes (optional)
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                className="w-full p-3 rounded text-lg"
+                style={inputStyle}
+                placeholder="Damage, repairs, special handling, etc."
+              />
             </div>
 
             {/* Zone */}

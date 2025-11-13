@@ -6,6 +6,7 @@ import { AddUnitPage } from './components/AddUnitPage';
 import { EditUnitPage } from './components/EditUnitPage';
 import { UnitDetailPage } from './components/UnitDetailPage';
 import { ExportButton } from './components/ExportButton';
+import { PrintButton } from './components/PrintButton';
 import { LayoutBuilder } from './components/LayoutBuilder';
 import { InventoryValue } from './components/InventoryValue';
 import type { Unit } from './types';
@@ -77,7 +78,10 @@ function AppContent() {
                 Warehouse Manager
               </h1>
             </div>
-            <ExportButton />
+            <div className="flex gap-2">
+              <PrintButton />
+              <ExportButton />
+            </div>
           </div>
         </div>
         <p className="text-white text-sm mt-2 ml-1" style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.5)' }}>

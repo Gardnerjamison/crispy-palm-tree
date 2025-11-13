@@ -14,6 +14,8 @@ export interface Unit {
   purchasePrice?: number;     // Purchase price in dollars
   purchaseDate?: string;      // ISO date string
   supplier?: string;          // Supplier/vendor name
+  notes?: string;             // General notes/comments
+  condition?: 'Excellent' | 'Good' | 'Fair' | 'Poor';  // Equipment condition
 }
 
 export interface FloorLocation {

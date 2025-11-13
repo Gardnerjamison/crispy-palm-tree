@@ -12,6 +12,12 @@ interface WarehouseContextType {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   updateLayout: (layout: Partial<WarehouseLayout>) => void;
+  filterStatus: string;
+  setFilterStatus: (status: string) => void;
+  filterZone: string;
+  setFilterZone: (zone: string) => void;
+  sortBy: string;
+  setSortBy: (sort: string) => void;
 }
 
 const WarehouseContext = createContext<WarehouseContextType | undefined>(undefined);
@@ -53,6 +59,9 @@ export function WarehouseProvider({ children }: { children: ReactNode }) {
   });
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+  const [filterZone, setFilterZone] = useState('');
+  const [sortBy, setSortBy] = useState('dateAdded');
 
   // Save to localStorage whenever units or layout change
   useEffect(() => {
@@ -99,6 +108,12 @@ export function WarehouseProvider({ children }: { children: ReactNode }) {
         searchQuery,
         setSearchQuery,
         updateLayout,
+        filterStatus,
+        setFilterStatus,
+        filterZone,
+        setFilterZone,
+        sortBy,
+        setSortBy,
       }}
     >
       {children}

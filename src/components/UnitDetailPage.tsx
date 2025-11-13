@@ -1,4 +1,5 @@
 import { useWarehouse } from '../context/WarehouseContext';
+import { PrintUnitLabel, PrintUnitDetail } from './PrintButton';
 import type { Unit } from '../types';
 
 interface UnitDetailPageProps {
@@ -226,6 +227,30 @@ export function UnitDetailPage({ unit, onClose, onEdit }: UnitDetailPageProps) {
               </div>
             </div>
 
+            {/* Condition */}
+            {unit.condition && (
+              <div>
+                <label className="block" style={labelStyle}>
+                  Condition
+                </label>
+                <div style={fieldStyle}>
+                  {unit.condition}
+                </div>
+              </div>
+            )}
+
+            {/* Notes */}
+            {unit.notes && (
+              <div>
+                <label className="block" style={labelStyle}>
+                  Notes
+                </label>
+                <div style={fieldStyle}>
+                  {unit.notes}
+                </div>
+              </div>
+            )}
+
             {/* Financial Information Section */}
             {(unit.purchasePrice || unit.purchaseDate || unit.supplier) && (
               <div className="pt-4 mt-4" style={{
@@ -312,10 +337,18 @@ export function UnitDetailPage({ unit, onClose, onEdit }: UnitDetailPageProps) {
           </div>
 
           {/* Action Buttons */}
-          <div className="mt-6 flex gap-3">
-            <button
-              onClick={onEdit}
-              className="flex-1 text-white font-bold py-4 px-6 rounded transition-all shadow-lg text-lg"
+          <div className="mt-6 space-y-3">
+            {/* Print Buttons Row */}
+            <div className="flex gap-3">
+              <PrintUnitLabel unit={unit} />
+              <PrintUnitDetail unit={unit} />
+            </div>
+
+            {/* Edit/Close Buttons Row */}
+            <div className="flex gap-3">
+              <button
+                onClick={onEdit}
+                className="flex-1 text-white font-bold py-4 px-6 rounded transition-all shadow-lg text-lg"
               style={{
                 background: 'linear-gradient(to bottom, #a4d86f 0%, #73b73e 50%, #5a9d2e 100%)',
                 border: '2px solid #5a9d2e',
@@ -353,6 +386,7 @@ export function UnitDetailPage({ unit, onClose, onEdit }: UnitDetailPageProps) {
             >
               Close
             </button>
+            </div>
           </div>
         </div>
       </div>

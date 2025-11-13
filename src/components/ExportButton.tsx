@@ -27,6 +27,7 @@ export function ExportButton() {
       'Equipment Number': unit.equipmentNumber || '',
       'Fleet Number': unit.fleetNumber || '',
       'Status': unit.status,
+      'Condition': unit.condition || '',
       'Location Type': unit.location.type === 'floor' ? 'Floor' : 'Rack',
       'Zone': unit.location.zone,
       'Column': unit.location.type === 'rack' ? unit.location.column : '',
@@ -38,6 +39,7 @@ export function ExportButton() {
       'Supplier': unit.supplier || '',
       'Date Added': unit.createdDate || '',
       'Added By': unit.addedBy || '',
+      'Notes': unit.notes || '',
     }));
 
     // Create workbook and worksheet

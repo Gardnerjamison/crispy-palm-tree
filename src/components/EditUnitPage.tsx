@@ -24,6 +24,8 @@ export function EditUnitPage({ unit, onClose }: EditUnitPageProps) {
   const [purchasePrice, setPurchasePrice] = useState(unit.purchasePrice?.toString() || '');
   const [purchaseDate, setPurchaseDate] = useState(unit.purchaseDate || '');
   const [supplier, setSupplier] = useState(unit.supplier || '');
+  const [notes, setNotes] = useState(unit.notes || '');
+  const [condition, setCondition] = useState<Unit['condition']>(unit.condition || 'Good');
 
   const selectedZone = layout.zones.find(z => z.id === zone);
 
@@ -63,6 +65,8 @@ export function EditUnitPage({ unit, onClose }: EditUnitPageProps) {
       purchasePrice: purchasePrice ? parseFloat(purchasePrice) : undefined,
       purchaseDate: purchaseDate || undefined,
       supplier: supplier || undefined,
+      notes: notes || undefined,
+      condition: condition || undefined,
       updatedDate: new Date().toISOString(),
     });
 
@@ -277,6 +281,39 @@ export function EditUnitPage({ unit, onClose }: EditUnitPageProps) {
                 <option value="Sold-Ready">Sold - Ready</option>
                 <option value="On Hold">On Hold</option>
               </select>
+            </div>
+
+            {/* Condition */}
+            <div>
+              <label className="block text-sm mb-2" style={labelStyle}>
+                Condition
+              </label>
+              <select
+                value={condition}
+                onChange={(e) => setCondition(e.target.value as Unit['condition'])}
+                className="w-full p-3 rounded text-lg"
+                style={inputStyle}
+              >
+                <option value="Excellent">Excellent</option>
+                <option value="Good">Good</option>
+                <option value="Fair">Fair</option>
+                <option value="Poor">Poor</option>
+              </select>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <label className="block text-sm mb-2" style={labelStyle}>
+                Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                className="w-full p-3 rounded text-lg"
+                style={inputStyle}
+                placeholder="Damage, repairs, special handling, etc."
+              />
             </div>
 
             {/* Zone */}
