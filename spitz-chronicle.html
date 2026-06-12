@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SPITZ CHRONICLE — Bark of Time</title>
+<!--
+  SPITZ CHRONICLE: BARK OF TIME  (vertical slice)
+  A Chrono Trigger-style JRPG set in the world of Spitz Siege.
+  Single file, no dependencies. 480x270 internal canvas, TILE=16.
+
+  Controls:
+    Arrows / WASD ... move & menu navigation
+    Z / Enter ....... confirm, talk, interact
+    X / Esc ......... cancel
+
+  Two eras of the same valley: the peaceful Festival Era, and the
+  Great Siege two hundred years earlier, reached via the Bonehenge.
+  Recruit Akamaru, fight the Whisker Company, fell the Cursed Stone
+  Sentinel, and come home.
+-->
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#0a0612;overflow:hidden;}
+  body{display:flex;align-items:center;justify-content:center;}
+  canvas{image-rendering:pixelated;image-rendering:crisp-edges;background:#0a0612;}
+</style>
+</head>
+<body>
+<canvas id="c" width="480" height="270"></canvas>
+<script>
+'use strict';
+// ============================== SETUP ==============================
+const VIEW_W=480, VIEW_H=270, T=16, MW=60, MH=16, WORLD_W=MW*T;
+const cv=document.getElementById('c'), g=cv.getContext('2d');
+function fit(){
+  const s=Math.max(1,Math.floor(Math.min(innerWidth/VIEW_W,innerHeight/VIEW_H)));
+  cv.style.width=(VIEW_W*s)+'px'; cv.style.height=(VIEW_H*s)+'px';
+}
+addEventListener('resize',fit); fit();
+
+// ============================== INPUT ==============================
+const keys={}, hit={};
+const KEYMAP={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',
+  ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right',
+  KeyZ:'a',Enter:'a',Space:'a',KeyX:'b',Escape:'b'};
+addEventListener('keydown',e=>{
+  const k=KEYMAP[e.code]; if(!k) return;
+  if(!keys[k]) hit[k]=true;
+  keys[k]=true; e.preventDefault(); audioInit();
+});
+addEventListener('keyup',e=>{ const k=KEYMAP[e.code]; if(k) keys[k]=false; });
+function pr(k){ return !!hit[k]; }   // pressed this frame
+
+// ============================== AUDIO ==============================
+let AC=null;
+function audioInit(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } }
+function beep(f,d,type,vol){
+  if(!AC) return;
+  const o=AC.createOscillator(), gn=AC.createGain();
+  o.type=type||'square'; o.frequency.value=f;
+  gn.gain.setValueAtTime(vol||0.05,AC.currentTime);
+  gn.gain.exponentialRampToValueAtTime(0.001,AC.currentTime+d);
+  o.connect(gn); gn.connect(AC.destination);
+  o.start(); o.stop(AC.currentTime+d);
+}
+const sfx={
+  cursor(){ beep(660,0.05,'square',0.03); },
+  ok(){ beep(880,0.07,'square',0.04); },
+  cancel(){ beep(300,0.08,'square',0.03); },
+  hitS(){ beep(180,0.12,'sawtooth',0.06); },
+  tech(){ beep(520,0.2,'triangle',0.06); beep(780,0.25,'triangle',0.05); },
+  heal(){ beep(700,0.15,'sine',0.05); beep(1050,0.2,'sine',0.05); },
+  gate(){ beep(220,0.5,'sine',0.06); beep(330,0.5,'sine',0.05); beep(440,0.6,'sine',0.04); },
+  win(){ beep(523,0.12,'square',0.05); setTimeout(()=>beep(659,0.12,'square',0.05),120); setTimeout(()=>beep(784,0.25,'square',0.05),240); },
+  lose(){ beep(200,0.4,'sawtooth',0.05); setTimeout(()=>beep(150,0.6,'sawtooth',0.05),300); },
+};
+
+// ============================== MAP ==============================
+// t tree, . grass, p path, w water, h wall, r roof, d door, f fence,
+// * flower, S statue, o henge stone, G gate stone
+const MAPSRC=[
+"tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+"t.t..............t.....t...t.......t........t..........t...t",
+"t..rrrrrr...rrrrrr.. ....t........t..t.........t..........t",
+"t..hhdhhh...hhdhhh......ww wwww.....t..........t...........t",
+"t....p......p.*.........wwwwww.......t.....................t",
+"t...*p......p..*........wwwwww..............o..............t",
+"t.*..p.*..S.p................t..............................t",
+"t....p...*.p.*..............t.......t.......................t",
+"t..pppppppppppppppppppppppppppppppppppppppppppppppppG..o..t",
+"t........*.....*....t..............t.......................t",
+"t..*..........t.........t..................................t",
+"t.............t....t..............t........................t",
+"t.ffffffffffffffff......t..................................t",
+"t...........*...t.........t........t....................ttt",
+"t...*..........t.....t....t..........t..............tttttt",
+"tttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+];
+// Hand-tuned overrides for the Bonehenge ring (keeps the ring exact
+// even if the row art above drifts a character or two).
+const HENGE={cx:52, cy:8};
+const map=[];
+(function loadMap(){
+  for(let y=0;y<MH;y++){
+    // henge stones come from code below, so strip any o/G in the row art
+    const row=(MAPSRC[y]||'').replace(/[ oG]/g,'.').padEnd(MW,'.').slice(0,MW).split('');
+    row[0]='t'; row[MW-1]='t';
+    if(y===0||y===MH-1) row.fill('t');
+    map.push(row);
+  }
+  // carve the henge area clean, then place the ring + gate
+  for(let y=HENGE.cy-4;y<=HENGE.cy+4;y++)
+    for(let x=HENGE.cx-4;x<=HENGE.cx+4;x++)
+      if(y>0&&y<MH-1&&x>0&&x<MW-1&&map[y][x]!=='p') map[y][x]='.';
+  const ring=[[0,-3],[-2,-2],[2,-2],[3,0],[-2,2],[2,2],[0,3]];
+  ring.forEach(([dx,dy])=>{ map[HENGE.cy+dy][HENGE.cx+dx]='o'; });
+  map[HENGE.cy][HENGE.cx]='G';
+  // path runs straight to the gate
+  for(let x=HENGE.cx-4;x<HENGE.cx;x++) map[HENGE.cy][x]='p';
+})();
+const SOLID={t:1,w:1,h:1,r:1,d:1,f:1,o:1,S:1};
+function tileAt(px,py){
+  const tx=Math.floor(px/T), ty=Math.floor(py/T);
+  if(tx<0||ty<0||tx>=MW||ty>=MH) return 't';
+  return map[ty][tx];
+}
+function solidAt(px,py){ return !!SOLID[tileAt(px,py)]; }
+
+// ============================== STORY DATA ==============================
+const C={corgi:'#c85a2a',shiba:'#d05828',bulldog:'#a03030',laika:'#5a8fc8',
+  pwd:'#2a8a9a',chow:'#c8a020',gold:'#d4a820',ui:'#8a7a9a',dim:'#6a5a7a'};
+
+const flags={metElder:false, merchantGift:false, gateKnown:false,
+  firstSwap:false, akamaruJoined:false, bossDown:false, battleHint:false};
+
+const NPCS={
+  present:[
+    {id:'elder', x:11.5*T, y:7.5*T, breed:'bulldog', col:C.bulldog, name:'ELDER WINSTON',
+     lines:()=>flags.metElder?
+       ["Rest by the festival fire, pup. *snore*","...mm? Oh. You're all patched up. Off you trot."]:
+       ["Two hundred years since the Great Siege, and we still light the festival fires.",
+        "My ancestor, Lord Pugsworth III, never once retreated. He did, however, nap mid-siege. We honor both traditions.",
+        "Mind the old Bonehenge east of the wood. On festival nights the stones HUM. Nothing that hums is ever just a rock."],
+     after(){ flags.metElder=true; flags.gateKnown=true; healParty(); sfx.heal();
+       toast('The festival fire restores the party!'); }},
+    {id:'maya', x:16.5*T, y:9.5*T, breed:'laika', col:C.laika, name:'MAYA',
+     lines:()=>["Jarl Bork Ironpaw's howl brought down more walls than any siege engine. That's what gran-gran says!",
+       "I tried howling at the henge stones once. They howled BACK."]},
+    {id:'mei', x:13.5*T, y:10.5*T, breed:'chow', col:C.chow, name:'MERCHANT MEI',
+     lines:()=>flags.merchantGift?
+       ["The Silk Road never closes. It naps, occasionally."]:
+       ["A festival gift, little Borksworth! Kibble, finest on the Silk Road.",
+        "My dynasty is older than the bone itself. Probably."],
+     after(){ if(!flags.merchantGift){ flags.merchantGift=true; addItem('kibble',2);
+       toast('Received 2x KIBBLE!'); sfx.ok(); } }},
+    {id:'statue', x:10.5*T, y:6.6*T, statue:true, name:'STATUE',
+     lines:()=>["LADY BORKSWORTH — CELTIC SIEGE-MASTER.","\"She never surrendered a castle. Or a tennis ball.\""]},
+  ],
+  siege:[
+    {id:'akamaru', x:26.5*T, y:7.5*T, breed:'shiba', col:C.shiba, name:'???',
+     lines:()=>["... ...","You are not of this era. Your fur smells of festivals.",
+       "I am Akamaru. The cats' Whisker Company holds the road east, and a cursed stone walks before the henge.",
+       "...Your walls fell too, didn't they. Very well. We go together."],
+     after(){ recruitAkamaru(); }},
+    {id:'sailor', x:12.5*T, y:10.5*T, breed:'pwd', col:C.pwd, name:'WOUNDED SAILOR',
+     lines:()=>["Capitã Ondina once boarded a ship that was not, strictly speaking, at sea.",
+       "The Whisker Company took the harbor anyway. Cats, pup. CATS. With BOMBS."]},
+  ],
+};
+
+const ENEMYDEF={
+  hound:{name:'WAR HOUND', hp:46, atk:9, rate:0.55, xp:18, gold:12, col:'#3a2430'},
+  cat:  {name:'CAT SAPPER', hp:32, atk:7, rate:0.7, xp:14, gold:10, col:'#5a5a66', bomber:true},
+  sentinel:{name:'CURSED SENTINEL', hp:240, atk:13, rate:0.42, xp:120, gold:100, col:'#4a3a5e', boss:true},
+};
+let worldFoes=[];
+function spawnFoes(){
+  worldFoes=[
+    {x:32*T, y:7*T,  group:['hound'],            dead:false, dir:1},
+    {x:38*T, y:10*T, group:['cat','cat'],         dead:false, dir:1},
+    {x:44*T, y:8.6*T,group:['hound','cat'],       dead:false, dir:1},
+    {x:48*T, y:8.5*T,group:['sentinel'], boss:true, dead:false, dir:1},
+  ];
+}
+spawnFoes();
+
+const TECH={
+  pip:{name:'RAMPART RUSH', mp:4, mult:2.3, target:'one', desc:'Heavy charge, one foe'},
+  aka:{name:'CRIMSON WIND', mp:4, mult:1.5, target:'all', desc:'Slashing gale, all foes'},
+};
+const DUAL={name:'BLAZING RAMPART', mp:5, desc:'Both ready: fire charge, all foes'};
+const ITEMDEF={
+  kibble:{name:'KIBBLE', heal:35, desc:'Restores 35 HP'},
+  biscuit:{name:'SALT BISCUIT', heal:90, desc:'Restores 90 HP'},
+};
+let inv={kibble:3, biscuit:1};
+function addItem(id,n){ inv[id]=(inv[id]||0)+n; }
+let gold=25;
+
+function mkHero(id,name,breed,col,hp,mp,atk,rate){
+  return {id,name,breed,col,hp,max:hp,mp,maxmp:mp,atk,rate,lvl:1,xp:0,atb:0,lunge:0,hurt:0};
+}
+let party=[mkHero('pip','PIP','corgi',C.corgi,62,8,11,1.0)];
+function recruitAkamaru(){
+  if(flags.akamaruJoined) return;
+  flags.akamaruJoined=true;
+  const a=mkHero('aka','AKAMARU','shiba',C.shiba,58,10,13,1.12);
+  a.lvl=party[0].lvl; a.xp=party[0].xp;
+  for(let i=1;i<a.lvl;i++){ a.max+=12; a.hp=a.max; a.maxmp+=2; a.mp=a.maxmp; a.atk+=3; }
+  party.push(a);
+  NPCS.siege=NPCS.siege.filter(n=>n.id!=='akamaru');
+  sfx.win();
+  toast('AKAMARU joined the party!');
+}
+function healParty(){ party.forEach(p=>{ p.hp=p.max; p.mp=p.maxmp; }); }
+const XPLVL=[0,30,75,140,230];
+function giveXP(n){
+  party.forEach(p=>{
+    if(p.hp<=0) return;
+    p.xp+=n;
+    while(p.lvl<XPLVL.length && p.xp>=XPLVL[p.lvl]){
+      p.lvl++; p.max+=12; p.maxmp+=2; p.atk+=3; p.hp=p.max; p.mp=p.maxmp;
+      toast(p.name+' reached LV '+p.lvl+'!'); sfx.win();
+    }
+  });
+}
+
+// ============================== GLOBAL STATE ==============================
+let mode='title';     // title|intro|world|dialog|battle|swap|ending|gameover
+let era='present';    // present|siege
+const player={x:6*T+8, y:10*T+8, dir:'down', step:0, moving:false};
+let cam=0, tGlobal=0, fade=0, fadeDir=0, toastMsg=null, toastT=0, interactCd=0;
+function toast(m){ toastMsg=m; toastT=2.6; }
+
+// dialog
+let dlg=null; // {name, pages:[], pi, ci, done}
+function say(name,pages,done){
+  mode='dialog';
+  dlg={name, pages:Array.isArray(pages)?pages:[pages], pi:0, ci:0, done};
+}
+
+// intro / ending pages
+const INTRO=[
+"Two hundred years ago, the Six Great Packs went to war.",
+"Cannons sang. Walls fell. The valley burned for a season, and they called it the GREAT SIEGE.",
+"Tonight is the Festival of the Truce in Wagford, and PIP BORKSWORTH — last pup of the Siege-Master's line — has been told, repeatedly, not to go near the Bonehenge.",
+"The stones are humming."
+];
+const ENDING=[
+"The Sentinel crumbled, and for one breath the whole valley of the Siege went quiet.",
+"Akamaru stared at the henge a long time. \"Go home, festival-pup. Some of us still have a war to lose properly.\"",
+"The stones hummed. The light took her.",
+"Pip came home to the smell of festival fires — and a statue in the square that now, faintly, seemed to be smiling.",
+"SPITZ CHRONICLE — END OF THE VERTICAL SLICE. The other four packs are waiting..."
+];
+let pagei=0;
+
+// battle
+let battle=null;
+let swirl=0, pendingBattle=null;
+
+// particles
+const parts=[];
+for(let i=0;i<36;i++) parts.push({x:Math.random()*WORLD_W,y:Math.random()*VIEW_H,v:8+Math.random()*14,sw:Math.random()*6.28});
+
+// ============================== SPRITES ==============================
+function dogSprite(x,y,breed,col,dir,step,sc){
+  sc=sc||1;
+  g.save(); g.translate(Math.round(x),Math.round(y)); g.scale(sc,sc);
+  // shadow
+  g.fillStyle='rgba(0,0,0,0.3)'; g.fillRect(-6,-1,12,2);
+  const walk=Math.floor(step*8)%2;
+  // legs
+  g.fillStyle=col;
+  g.fillRect(-5,-4,2,4-(walk?1:0)); g.fillRect(3,-4,2,4-(walk?0:1));
+  // body
+  g.fillRect(-6,-10,12,7);
+  g.fillStyle='rgba(0,0,0,0.25)'; g.fillRect(1,-10,5,7);
+  g.fillStyle='rgba(255,255,255,0.14)'; g.fillRect(-6,-10,2,7);
+  // tail
+  g.fillStyle=col;
+  if(breed==='shiba'||breed==='laika'||breed==='chow'){ g.fillRect(dir==='left'?5:-7,-13,2,4); }
+  else g.fillRect(dir==='left'?6:-8,-9,2,3);
+  // head
+  const hx=dir==='left'?-7:dir==='right'?-1:-4;
+  g.fillStyle=col; g.fillRect(hx,-16,8,7);
+  // ears + markings (echoes Spitz Siege commander art)
+  if(breed==='corgi'){
+    g.fillRect(hx-1,-20,3,5); g.fillRect(hx+6,-20,3,5);
+    g.fillStyle='rgba(0,0,0,0.4)'; g.fillRect(hx,-19,1,3); g.fillRect(hx+7,-19,1,3);
+    g.fillStyle='#ece4d4'; g.fillRect(hx+3,-16,2,4);
+  } else if(breed==='shiba'){
+    g.fillRect(hx,-19,3,4); g.fillRect(hx+5,-19,3,4);
+    g.fillStyle='#f0e0c8'; g.fillRect(hx,-12,2,2); g.fillRect(hx+6,-12,2,2);
+  } else if(breed==='bulldog'){
+    g.fillStyle='rgba(0,0,0,0.45)'; g.fillRect(hx-1,-16,2,3); g.fillRect(hx+7,-16,2,3);
+    g.fillStyle='#ece4d4'; g.fillRect(hx+1,-11,2,2); g.fillRect(hx+5,-11,2,2);
+  } else if(breed==='laika'){
+    g.fillRect(hx,-19,2,4); g.fillRect(hx+6,-19,2,4);
+    g.fillStyle='#ece4d4'; g.fillRect(hx+1,-12,6,2);
+  } else if(breed==='pwd'){
+    g.fillRect(hx-1,-18,2,5); g.fillRect(hx+7,-18,2,5);
+    g.fillRect(hx+1,-18,2,1); g.fillRect(hx+4,-19,2,1);
+  } else if(breed==='chow'){
+    g.fillRect(hx-2,-18,12,4);
+    g.fillStyle='rgba(0,0,0,0.35)'; g.fillRect(hx,-18,2,2); g.fillRect(hx+6,-18,2,2);
+  }
+  // face
+  if(dir!=='up'){
+    g.fillStyle='#0a0408';
+    if(dir==='left'){ g.fillRect(hx+1,-14,1,2); }
+    else if(dir==='right'){ g.fillRect(hx+6,-14,1,2); }
+    else { g.fillRect(hx+1,-14,2,2); g.fillRect(hx+5,-14,2,2); }
+    g.fillStyle='rgba(255,255,255,0.2)';
+    const sx=dir==='left'?hx-1:dir==='right'?hx+6:hx+2;
+    g.fillRect(sx,-12,3,2);
+  }
+  g.restore();
+}
+function catSprite(x,y,t,sc){
+  sc=sc||1; g.save(); g.translate(Math.round(x),Math.round(y)); g.scale(sc,sc);
+  g.fillStyle='rgba(0,0,0,0.3)'; g.fillRect(-5,-1,10,2);
+  g.fillStyle='#5a5a66'; g.fillRect(-5,-8,10,6); g.fillRect(-2,-13,7,6);
+  g.fillRect(-1,-16,2,3); g.fillRect(3,-16,2,3);
+  g.fillStyle='#3c3c46'; g.fillRect(1,-8,4,6);
+  g.fillRect(5,-7+Math.sin(t*4)*1,2,4); // tail
+  g.fillStyle='#c8e040'; g.fillRect(-1,-11,2,2); g.fillRect(3,-11,2,2);
+  // the bomb
+  g.fillStyle='#181620'; g.fillRect(-9,-7,5,5);
+  g.fillStyle='#d4a820'; g.fillRect(-7,-9,1,2);
+  g.restore();
+}
+function sentinelSprite(x,y,t,hurt){
+  g.save(); g.translate(Math.round(x),Math.round(y));
+  const bob=Math.sin(t*1.5)*1.5;
+  g.fillStyle='rgba(0,0,0,0.4)'; g.fillRect(-16,-2,32,4);
+  g.translate(0,bob);
+  g.fillStyle=hurt>0?'#8a6aae':'#4a3a5e';
+  g.fillRect(-14,-40,28,34);           // torso block
+  g.fillRect(-20,-34,6,20); g.fillRect(14,-34,6,20); // arms
+  g.fillRect(-10,-52,20,14);           // head block
+  g.fillStyle='#322846';
+  g.fillRect(-14,-40,5,34); g.fillRect(-10,-52,4,14);
+  // cracks
+  g.fillStyle='#1e1430';
+  g.fillRect(-4,-36,2,12); g.fillRect(4,-28,2,10); g.fillRect(-8,-20,8,2);
+  // cursed glow
+  const gl=0.5+Math.sin(t*5)*0.3;
+  g.fillStyle='rgba(200,80,255,'+(0.35*gl)+')';
+  g.fillRect(-4,-36,2,12); g.fillRect(4,-28,2,10);
+  // eyes
+  g.fillStyle='#e060ff'; g.fillRect(-6,-48,4,3); g.fillRect(2,-48,4,3);
+  g.fillStyle='#fff'; g.fillRect(-5,-48,1,1); g.fillRect(3,-48,1,1);
+  g.restore();
+}
+function houndSprite(x,y,t,sc){
+  sc=sc||1; g.save(); g.translate(Math.round(x),Math.round(y)); g.scale(sc,sc);
+  g.fillStyle='rgba(0,0,0,0.3)'; g.fillRect(-7,-1,14,2);
+  g.fillStyle='#3a2430';
+  g.fillRect(-7,-9,14,7); g.fillRect(-11,-14,8,7);
+  g.fillRect(-6,-4+(Math.floor(t*6)%2),2,4); g.fillRect(4,-4+((Math.floor(t*6)+1)%2),2,4);
+  g.fillStyle='#241620'; g.fillRect(-11,-16,3,3); g.fillRect(-5,-16,3,3);
+  g.fillStyle='#ff4040'; g.fillRect(-9,-12,2,2);
+  g.fillStyle='#ece4d4'; g.fillRect(-11,-9,3,1); // bared teeth
+  g.restore();
+}
+
+// ============================== TILES ==============================
+function drawTile(tx,ty,ch){
+  const x=tx*T-cam, y=ty*T;
+  const siege=era==='siege';
+  // ground under everything
+  g.fillStyle=siege?'#2e2026':'#274a28';
+  g.fillRect(x,y,T,T);
+  if((tx*7+ty*13)%5===0){ g.fillStyle=siege?'#352329':'#2d5430'; g.fillRect(x+3,y+5,2,2); g.fillRect(x+10,y+11,2,2); }
+  switch(ch){
+    case 'p':
+      g.fillStyle=siege?'#4a3a34':'#8a7450'; g.fillRect(x,y,T,T);
+      g.fillStyle=siege?'#3c2f2b':'#7a6644'; g.fillRect(x+2,y+3,3,2); g.fillRect(x+9,y+10,4,2);
+      break;
+    case 't':{
+      g.fillStyle=siege?'#241a20':'#1c3a1e'; g.fillRect(x+2,y-4,12,14);
+      g.fillStyle=siege?'#1a1218':'#15301a'; g.fillRect(x+2,y-4,4,14);
+      if(siege){ g.fillStyle='#0e0a10'; g.fillRect(x+4,y-2,8,2); }
+      g.fillStyle=siege?'#2a1c18':'#4a3220'; g.fillRect(x+6,y+10,4,6);
+      break; }
+    case 'w':{
+      g.fillStyle=siege?'#1a2230':'#1e4a6a'; g.fillRect(x,y,T,T);
+      const sh=Math.sin(tGlobal*2+tx+ty)*1.5;
+      g.fillStyle=siege?'#243044':'#2e6a8e'; g.fillRect(x+2,y+4+sh,6,1); g.fillRect(x+8,y+10-sh,6,1);
+      break; }
+    case 'h':
+      g.fillStyle=siege?'#3a3038':'#6a5a48'; g.fillRect(x,y,T,T);
+      g.fillStyle=siege?'#2c242c':'#584a3a'; g.fillRect(x,y+T-3,T,3); g.fillRect(x+T-3,y,3,T);
+      g.fillStyle=siege?'#463c46':'#7a6a56'; g.fillRect(x,y,T,2);
+      if(siege){ g.fillStyle='#15101a'; g.fillRect(x+5,y+4,6,8); }
+      break;
+    case 'd':
+      g.fillStyle=siege?'#3a3038':'#6a5a48'; g.fillRect(x,y,T,T);
+      g.fillStyle=siege?'#171019':'#3a2818'; g.fillRect(x+3,y+2,10,14);
+      g.fillStyle=C.gold; if(!siege) g.fillRect(x+11,y+9,2,2);
+      break;
+    case 'r':{
+      g.fillStyle=siege?'#4a2630':'#8a3030'; g.fillRect(x,y-4,T,T+4);
+      g.fillStyle=siege?'#38202a':'#702828'; g.fillRect(x,y-4,T,3); g.fillRect(x,y+6,T,2);
+      if(siege){ // burning roofs
+        const f=Math.sin(tGlobal*9+tx*3)*0.5+0.5;
+        g.fillStyle='rgba(255,'+(120+f*80|0)+',40,'+(0.5+f*0.3)+')';
+        g.fillRect(x+3,y-9-f*3,4,6+f*3); g.fillRect(x+9,y-7-f*2,3,5+f*2);
+      }
+      break; }
+    case 'f':
+      if(siege && (tx%3===0)) break; // broken fences
+      g.fillStyle=siege?'#3c2c24':'#6a4a2a';
+      g.fillRect(x+1,y+4,3,10); g.fillRect(x+11,y+4,3,10); g.fillRect(x,y+6,T,3);
+      break;
+    case '*':
+      if(siege){ g.fillStyle='#3c3036'; g.fillRect(x+4,y+8,5,4); g.fillRect(x+8,y+5,4,4); }
+      else { g.fillStyle=['#d05878','#d4a820','#e8e0f0'][(tx+ty)%3]; g.fillRect(x+5,y+5,3,3); g.fillRect(x+10,y+9,3,3);
+        g.fillStyle='#2d5430'; g.fillRect(x+6,y+8,1,4); g.fillRect(x+11,y+12,1,3); }
+      break;
+    case 'S':
+      g.fillStyle='#8a8294'; g.fillRect(x+3,y+8,10,8);
+      if(!siege){ // the statue only exists in the present
+        dogSprite(x+T/2+cam-cam,y+9,'corgi','#a89cb0','down',0,1);
+        g.fillStyle='#8a8294'; g.fillRect(x+3,y+8,10,8);
+        g.fillStyle='#6a6478'; g.fillRect(x+3,y+14,10,2);
+        dogSprite(x+8,y+10,'corgi','#a89cb0','down',0,1);
+      } else { g.fillStyle='#5a5468'; g.fillRect(x+5,y+4,6,6); }
+      break;
+    case 'o':{
+      g.fillStyle='#5a5070'; g.fillRect(x+3,y-8,10,24);
+      g.fillStyle='#443c58'; g.fillRect(x+3,y-8,3,24);
+      g.fillStyle='#6e6488'; g.fillRect(x+3,y-8,10,2);
+      const hum=0.4+Math.sin(tGlobal*3+tx)*0.3;
+      g.fillStyle='rgba(120,200,255,'+(hum*0.5)+')'; g.fillRect(x+6,y-2,4,2); g.fillRect(x+7,y+4,2,6);
+      break; }
+    case 'G':{
+      g.fillStyle='#3a3450'; g.fillRect(x,y,T,T);
+      const p2=0.5+Math.sin(tGlobal*2.5)*0.5;
+      g.fillStyle='rgba(120,200,255,'+(0.25+p2*0.45)+')';
+      g.fillRect(x+2,y+2,T-4,T-4);
+      g.fillStyle='rgba(255,255,255,'+(0.3+p2*0.5)+')';
+      g.fillRect(x+6,y+6,4,4);
+      break; }
+  }
+}
+
+// ============================== WORLD ==============================
+function npcsNow(){ return NPCS[era]; }
+function updateWorld(dt){
+  // movement
+  let dx=0,dy=0;
+  if(keys.left)dx=-1; if(keys.right)dx=1; if(keys.up)dy=-1; if(keys.down)dy=1;
+  player.moving=!!(dx||dy);
+  if(dx) player.dir=dx<0?'left':'right';
+  else if(dy) player.dir=dy<0?'up':'down';
+  if(player.moving){
+    const sp=82*dt, nx=player.x+dx*sp, ny=player.y+dy*sp;
+    const hw=4, hh=3;
+    if(!solidAt(nx-hw,player.y)&&!solidAt(nx+hw,player.y)&&!solidAt(nx-hw,player.y+hh)&&!solidAt(nx+hw,player.y+hh)) player.x=nx;
+    if(!solidAt(player.x-hw,ny)&&!solidAt(player.x+hw,ny)&&!solidAt(player.x-hw,ny+hh)&&!solidAt(player.x+hw,ny+hh)) player.y=ny;
+    player.x=Math.max(8,Math.min(WORLD_W-8,player.x));
+    player.y=Math.max(20,Math.min(MH*T-4,player.y));
+    player.step+=dt*1.6;
+  }
+  cam=Math.max(0,Math.min(WORLD_W-VIEW_W, player.x-VIEW_W/2));
+
+  // foes wander (siege era only)
+  if(era==='siege'){
+    worldFoes.forEach(f=>{
+      if(f.dead||f.boss) return;
+      f.x+=f.dir*14*dt;
+      if(solidAt(f.x+f.dir*8,f.y)||Math.random()<0.004) f.dir*=-1;
+      const d=Math.hypot(f.x-player.x,f.y-player.y);
+      if(d<14) triggerBattle(f);
+    });
+    const b=worldFoes.find(f=>f.boss&&!f.dead);
+    if(b && Math.hypot(b.x-player.x,b.y-player.y)<26){
+      say('CURSED SENTINEL',["GRRRRND. THE STONE REMEMBERS THE SIEGE.","NONE PASS TO THE HENGE. NONE GO HOME."],
+        ()=>triggerBattle(b));
+      return;
+    }
+  }
+
+  // interactions
+  if(interactCd>0) interactCd-=dt;
+  const near=npcsNow().find(n=>Math.hypot(n.x-player.x,n.y-player.y)<22);
+  const onGate=tileAt(player.x,player.y)==='G';
+  if(pr('a') && interactCd<=0){
+    if(near){
+      sfx.ok();
+      say(near.name, near.lines(), ()=>{ if(near.after) near.after(); });
+    } else if(onGate){
+      useGate();
+    }
+  }
+}
+function useGate(){
+  sfx.gate();
+  if(era==='siege' && flags.bossDown){
+    fadeDir=1; mode='swap';
+    setTimeout(()=>{ mode='ending'; pagei=0; fade=1; fadeDir=-1; },700);
+    return;
+  }
+  if(!flags.firstSwap && era==='present'){
+    flags.firstSwap=true;
+    say('PIP',["The stones — they're singing! It feels like falling UP—"],
+      ()=>{ doSwap(); });
+  } else doSwap();
+}
+function doSwap(){
+  fadeDir=1; mode='swap';
+  setTimeout(()=>{
+    era = era==='present'?'siege':'present';
+    fadeDir=-1; mode='world';
+    if(era==='siege' && !flags.akamaruJoined)
+      say('PIP',["...The valley is BURNING. The houses, the square — this is the Great Siege!",
+        "The henge brought me back two hundred years. I need to find a way home... carefully."]);
+  },700);
+}
+function triggerBattle(f){
+  pendingBattle=f; swirl=0; mode='battleIn'; sfx.hitS();
+}
+
+function drawWorld(){
+  // sky/ambient
+  const grd=g.createLinearGradient(0,0,0,VIEW_H);
+  if(era==='siege'){ grd.addColorStop(0,'#2a0e16'); grd.addColorStop(1,'#170a12'); }
+  else { grd.addColorStop(0,'#16213e'); grd.addColorStop(1,'#0f1626'); }
+  g.fillStyle=grd; g.fillRect(0,0,VIEW_W,VIEW_H);
+  // tiles
+  const x0=Math.floor(cam/T), x1=Math.min(MW-1,x0+VIEW_W/T+1);
+  for(let y=0;y<MH;y++) for(let x=x0;x<=x1;x++) drawTile(x,y,map[y][x]);
+  // particles: petals (present) / ash (siege)
+  parts.forEach(p=>{
+    p.y+=p.v*0.016; p.x+=Math.sin(p.sw+tGlobal)*0.3;
+    if(p.y>VIEW_H){ p.y=-4; p.x=cam+Math.random()*VIEW_W; }
+    const sx=p.x-cam; if(sx<-4||sx>VIEW_W) return;
+    g.fillStyle=era==='siege'?'rgba(220,160,120,0.5)':'rgba(240,200,230,0.55)';
+    g.fillRect(sx,p.y,2,2);
+  });
+  // npcs
+  npcsNow().forEach(n=>{
+    if(n.statue) return;
+    dogSprite(n.x-cam,n.y,n.breed,n.col,'down',tGlobal*0.4,1);
+  });
+  // foes
+  if(era==='siege') worldFoes.forEach(f=>{
+    if(f.dead) return;
+    if(f.boss) sentinelSprite(f.x-cam,f.y+8,tGlobal,0);
+    else if(f.group[0]==='cat') catSprite(f.x-cam,f.y,tGlobal,1);
+    else houndSprite(f.x-cam,f.y,tGlobal,1);
+  });
+  // player
+  dogSprite(player.x-cam,player.y,party[0].breed,party[0].col,player.dir,player.moving?player.step:0,1);
+  if(flags.akamaruJoined){
+    // follower trails behind
+    const fx=player.x+(player.dir==='left'?14:player.dir==='right'?-14:0);
+    const fy=player.y+(player.dir==='up'?14:player.dir==='down'?-14:6);
+    dogSprite(fx-cam,fy,'shiba',C.shiba,player.dir,player.moving?player.step:0,1);
+  }
+  // interact prompt
+  const near=npcsNow().find(n=>Math.hypot(n.x-player.x,n.y-player.y)<22);
+  if(near||tileAt(player.x,player.y)==='G'){
+    g.fillStyle=C.gold; g.font='8px monospace'; g.textAlign='center';
+    const label=near?('Z: TALK'):'Z: TOUCH THE STONE';
+    g.fillText(label, player.x-cam, player.y-26);
+  }
+  drawHUD();
+}
+function drawHUD(){
+  g.fillStyle='rgba(4,1,14,0.85)'; g.fillRect(0,VIEW_H-14,VIEW_W,14);
+  g.font='8px monospace'; g.textAlign='left'; g.fillStyle=C.gold;
+  g.fillText((era==='present'?'FESTIVAL ERA':'THE GREAT SIEGE  -200 YRS'),4,VIEW_H-4);
+  g.textAlign='right'; g.fillStyle=C.ui;
+  let s=party.map(p=>p.name+' '+Math.max(0,p.hp)+'/'+p.max).join('  ');
+  g.fillText(s+'  G:'+gold, VIEW_W-4, VIEW_H-4);
+}
+
+// ============================== BATTLE ==============================
+function startBattle(group, srcFoe){
+  const foes=group.map((id,i)=>{
+    const d=ENEMYDEF[id];
+    return {d, hp:d.hp, max:d.hp, atb:Math.random()*0.3, dead:false, hurt:0, lunge:0, acts:0,
+      x:90+(i%2)*46, y:120+i*44 - (group.length>1?20:0)};
+  });
+  if(group[0]==='sentinel'){ foes[0].x=110; foes[0].y=165; }
+  party.forEach((p,i)=>{ p.atb=Math.random()*0.2; p.lunge=0; p.hurt=0; p.bx=370+i*30; p.by=110+i*60; });
+  battle={foes, srcFoe, menu:null, act:null, popups:[], result:null, resultT:0, shake:0};
+  mode='battle';
+}
+function alive(arr){ return arr.filter(u=>!u.dead&&u.hp>0); }
+function popup(x,y,txt,col){ battle.popups.push({x,y,txt,col,t:1}); }
+
+function calcDmg(atk,mult){
+  let d=atk*mult*(0.85+Math.random()*0.3);
+  if(Math.random()<0.1){ d*=1.6; return {d:Math.round(d),crit:true}; }
+  return {d:Math.round(d),crit:false};
+}
+function queueAct(src,tgts,kind,info){
+  battle.act={src,tgts,kind,info,t:0,dur:0.55,applied:false};
+  battle.menu=null;
+}
+function applyAct(){
+  const a=battle.act;
+  if(a.kind==='attack'||a.kind==='tech'){
+    const mult=a.kind==='attack'?1:a.info.mult;
+    a.tgts.forEach(tg=>{
+      const r=calcDmg(a.src.atk,mult);
+      tg.hp-=r.d; tg.hurt=0.35;
+      popup(tg.x||tg.bx,(tg.y||tg.by)-30,r.d+(r.crit?'!':''),r.crit?'#ffd040':'#fff');
+      if(tg.hp<=0){ tg.hp=0; tg.dead=true; }
+    });
+    if(a.kind==='tech') sfx.tech(); else sfx.hitS();
+    battle.shake=a.kind==='tech'?4:2;
+  } else if(a.kind==='dual'){
+    const dmg=(party[0].atk+party[1].atk)*1.7;
+    a.tgts.forEach(tg=>{
+      const r=calcDmg(dmg,1);
+      tg.hp-=r.d; tg.hurt=0.4;
+      popup(tg.x,tg.y-34,r.d+(r.crit?'!':''),'#ff8030');
+      if(tg.hp<=0){ tg.hp=0; tg.dead=true; }
+    });
+    sfx.tech(); battle.shake=6;
+  } else if(a.kind==='item'){
+    const it=ITEMDEF[a.info.id];
+    a.tgts.forEach(tg=>{
+      tg.hp=Math.min(tg.max,tg.hp+it.heal);
+      popup(tg.bx,tg.by-30,'+'+it.heal,'#60e080');
+    });
+    sfx.heal();
+  } else if(a.kind==='ehit'){
+    a.tgts.forEach(tg=>{
+      const r=calcDmg(a.src.d.atk,a.info.mult||1);
+      tg.hp-=r.d; tg.hurt=0.35;
+      popup(tg.bx,tg.by-30,r.d+(r.crit?'!':''),'#ff7070');
+      if(tg.hp<=0){ tg.hp=0; tg.dead=true; }
+    });
+    sfx.hitS(); battle.shake=2;
+  }
+}
+function endAct(){
+  const a=battle.act;
+  if(a.kind==='dual'){ party[0].atb=0; party[1].atb=0;
+    party[0].mp-=DUAL.mp; party[1].mp-=DUAL.mp; }
+  else {
+    a.src.atb=0;
+    if(a.kind==='tech') a.src.mp-=a.info.mp;
+  }
+  if(a.kind==='ehit') a.src.acts++;
+  battle.act=null;
+  // outcome checks
+  if(!alive(battle.foes).length){
+    const xp=battle.foes.reduce((s,f)=>s+f.d.xp,0), gd=battle.foes.reduce((s,f)=>s+f.d.gold,0);
+    battle.result={win:true,xp,gd}; battle.resultT=0; sfx.win();
+  } else if(!alive(party).length){
+    battle.result={win:false}; battle.resultT=0; sfx.lose();
+  }
+}
+function openMenu(who){
+  const opts=[{id:'attack',label:'ATTACK'}];
+  const tech=TECH[who.id];
+  opts.push({id:'tech',label:tech.name,dis:who.mp<tech.mp,sub:tech.mp+'MP'});
+  if(party.length>1){
+    const other=party.find(p=>p!==who);
+    const ready=other&&!other.dead&&other.hp>0&&other.atb>=1&&other.mp>=DUAL.mp&&who.mp>=DUAL.mp;
+    opts.push({id:'dual',label:'DUAL: '+DUAL.name,dis:!ready,sub:DUAL.mp+'MP EA'});
+  }
+  opts.push({id:'item',label:'ITEM',dis:!Object.keys(inv).some(k=>inv[k]>0)});
+  battle.menu={who,opts,idx:0,stage:'root',tIdx:0,items:null};
+  flags.battleHint=true;
+}
+function updateBattle(dt){
+  battle.popups.forEach(p=>p.t-=dt); battle.popups=battle.popups.filter(p=>p.t>0);
+  battle.foes.forEach(f=>{ if(f.hurt>0)f.hurt-=dt; });
+  party.forEach(p=>{ if(p.hurt>0)p.hurt-=dt; });
+  if(battle.shake>0) battle.shake=Math.max(0,battle.shake-dt*20);
+
+  if(battle.result){
+    battle.resultT+=dt;
+    if(battle.resultT>0.8 && pr('a')){
+      if(battle.result.win){
+        giveXP(battle.result.xp); gold+=battle.result.gd;
+        party.forEach(p=>{ if(p.hp>0) p.mp=Math.min(p.maxmp,p.mp+2); });
+        if(battle.srcFoe){ battle.srcFoe.dead=true;
+          if(battle.srcFoe.boss){ flags.bossDown=true;
+            setTimeout(()=>say('AKAMARU',["...The stone sleeps. Your road home is open, festival-pup.","Touch the henge. And Pip — tell them the Siege had good dogs on every side."]),200); }
+        }
+        mode='world'; battle=null;
+      } else {
+        mode='gameover'; battle=null;
+      }
+      return;
+    }
+    return;
+  }
+
+  if(battle.act){
+    const a=battle.act; a.t+=dt;
+    a.src.lunge=Math.sin(Math.min(1,a.t/a.dur)*Math.PI)*12;
+    if(!a.applied && a.t>=a.dur*0.5){ a.applied=true; applyAct(); }
+    if(a.t>=a.dur){ a.src.lunge=0; endAct(); }
+    return;
+  }
+
+  if(battle.menu){ menuInput(); return; }
+
+  // ATB flow
+  party.forEach(p=>{ if(!p.dead&&p.hp>0) p.atb=Math.min(1,p.atb+p.rate*dt*0.45); });
+  battle.foes.forEach(f=>{ if(!f.dead) f.atb=Math.min(1,f.atb+f.d.rate*dt*0.45); });
+
+  const ef=battle.foes.find(f=>!f.dead&&f.atb>=1);
+  if(ef){ enemyAct(ef); return; }
+  const rp=party.find(p=>!p.dead&&p.hp>0&&p.atb>=1);
+  if(rp) openMenu(rp);
+}
+function enemyAct(f){
+  const ts=alive(party);
+  if(!ts.length) return;
+  if(f.d.boss && f.acts%3===2){
+    queueAct(f,ts.slice(),'ehit',{mult:0.8,label:'CURSED VOLLEY'});
+  } else if(f.d.bomber && Math.random()<0.3){
+    queueAct(f,ts.slice(),'ehit',{mult:0.6,label:'BOMB TOSS'});
+  } else {
+    queueAct(f,[ts[Math.floor(Math.random()*ts.length)]],'ehit',{});
+  }
+}
+function menuInput(){
+  const m=battle.menu;
+  if(m.stage==='root'){
+    if(pr('up')){ m.idx=(m.idx+m.opts.length-1)%m.opts.length; sfx.cursor(); }
+    if(pr('down')){ m.idx=(m.idx+1)%m.opts.length; sfx.cursor(); }
+    if(pr('a')){
+      const o=m.opts[m.idx];
+      if(o.dis){ sfx.cancel(); return; }
+      sfx.ok();
+      if(o.id==='attack'){ m.stage='target'; m.tIdx=0; m.pend={kind:'attack'}; }
+      else if(o.id==='tech'){
+        const tch=TECH[m.who.id];
+        if(tch.target==='all') queueAct(m.who,alive(battle.foes),'tech',tch);
+        else { m.stage='target'; m.tIdx=0; m.pend={kind:'tech',info:tch}; }
+      }
+      else if(o.id==='dual'){ queueAct(m.who,alive(battle.foes),'dual',{}); }
+      else if(o.id==='item'){
+        m.items=Object.keys(inv).filter(k=>inv[k]>0);
+        m.stage='item'; m.idx2=0;
+      }
+    }
+  } else if(m.stage==='target'){
+    const ts=alive(battle.foes);
+    if(!ts.length){ m.stage='root'; return; }
+    m.tIdx=Math.min(m.tIdx,ts.length-1);
+    if(pr('up')||pr('left')){ m.tIdx=(m.tIdx+ts.length-1)%ts.length; sfx.cursor(); }
+    if(pr('down')||pr('right')){ m.tIdx=(m.tIdx+1)%ts.length; sfx.cursor(); }
+    if(pr('b')){ m.stage='root'; sfx.cancel(); }
+    if(pr('a')){
+      sfx.ok();
+      if(m.pend.kind==='attack') queueAct(m.who,[ts[m.tIdx]],'attack',{});
+      else queueAct(m.who,[ts[m.tIdx]],'tech',m.pend.info);
+    }
+  } else if(m.stage==='item'){
+    if(!m.items.length){ m.stage='root'; return; }
+    m.idx2=Math.min(m.idx2,m.items.length-1);
+    if(pr('up')){ m.idx2=(m.idx2+m.items.length-1)%m.items.length; sfx.cursor(); }
+    if(pr('down')){ m.idx2=(m.idx2+1)%m.items.length; sfx.cursor(); }
+    if(pr('b')){ m.stage='root'; sfx.cancel(); }
+    if(pr('a')){ sfx.ok(); m.pendItem=m.items[m.idx2]; m.stage='ally'; m.aIdx=0; }
+  } else if(m.stage==='ally'){
+    const ts=alive(party);
+    m.aIdx=Math.min(m.aIdx,ts.length-1);
+    if(pr('up')||pr('down')){ m.aIdx=(m.aIdx+1)%ts.length; sfx.cursor(); }
+    if(pr('b')){ m.stage='item'; sfx.cancel(); }
+    if(pr('a')){
+      sfx.ok(); inv[m.pendItem]--;
+      queueAct(m.who,[ts[m.aIdx]],'item',{id:m.pendItem});
+    }
+  }
+}
+function drawBattle(){
+  const shx=battle.shake?(Math.random()-0.5)*battle.shake:0;
+  const shy=battle.shake?(Math.random()-0.5)*battle.shake:0;
+  g.save(); g.translate(shx,shy);
+  // backdrop: the burning siege valley
+  const grd=g.createLinearGradient(0,0,0,VIEW_H);
+  grd.addColorStop(0,'#30101c'); grd.addColorStop(0.7,'#1c0c16'); grd.addColorStop(1,'#120812');
+  g.fillStyle=grd; g.fillRect(-8,-8,VIEW_W+16,VIEW_H+16);
+  g.fillStyle='#241420';
+  for(let i=0;i<8;i++){ const w=30+((i*53)%40); g.fillRect(i*64-10,150-((i*37)%50),w,60); }
+  g.fillStyle='#2e2438'; g.fillRect(-8,186,VIEW_W+16,VIEW_H);
+  g.fillStyle='#3a3050'; g.fillRect(-8,186,VIEW_W+16,2);
+  // units
+  battle.foes.forEach((f,i)=>{
+    if(f.dead) return;
+    const fx=f.x+(battle.act&&battle.act.src===f?f.atb*0+battle.act.src.lunge:0);
+    if(f.d.boss) sentinelSprite(fx,f.y+20,tGlobal,f.hurt);
+    else if(f.d.bomber) catSprite(fx,f.y,tGlobal,2);
+    else houndSprite(fx,f.y,tGlobal,2);
+    if(f.hurt>0){ g.fillStyle='rgba(255,120,120,0.35)'; g.fillRect(fx-20,f.y-46,40,50); }
+    // hp bar
+    const r=f.hp/f.max;
+    g.fillStyle='#000'; g.fillRect(f.x-16,f.y+8,32,4);
+    g.fillStyle=r>0.5?'#3a9a3a':r>0.25?'#c8a020':'#cc2020'; g.fillRect(f.x-15,f.y+9,30*r,2);
+  });
+  party.forEach((p,i)=>{
+    const px=p.bx-(p.lunge||0);
+    if(p.hp<=0){
+      g.save(); g.translate(px,p.by); g.rotate(-1.4); dogSprite(0,0,p.breed,p.col,'left',0,2); g.restore();
+    } else {
+      dogSprite(px,p.by,p.breed,p.col,'left',battle.act&&battle.act.src===p?tGlobal*3:0,2);
+      if(p.hurt>0){ g.fillStyle='rgba(255,120,120,0.35)'; g.fillRect(px-16,p.by-36,32,40); }
+    }
+  });
+  // popups
+  battle.popups.forEach(p=>{
+    g.font='bold 10px monospace'; g.textAlign='center';
+    g.fillStyle='#000'; g.fillText(p.txt,p.x+1,p.y-(1-p.t)*16+1);
+    g.fillStyle=p.col; g.fillText(p.txt,p.x,p.y-(1-p.t)*16);
+  });
+  g.restore();
+
+  // ---- UI panel
+  g.fillStyle='rgba(4,1,14,0.92)'; g.fillRect(0,200,VIEW_W,70);
+  g.strokeStyle=C.gold; g.lineWidth=1; g.strokeRect(4.5,204.5,VIEW_W-9,61);
+  // party status (right)
+  party.forEach((p,i)=>{
+    const y=214+i*24;
+    g.font='8px monospace'; g.textAlign='left';
+    g.fillStyle=p.hp>0?'#fffae8':'#6a5a7a';
+    g.fillText(p.name+'  LV'+p.lvl,260,y);
+    g.fillStyle=C.ui; g.fillText('HP '+Math.max(0,p.hp)+'/'+p.max+'  MP '+p.mp,260,y+9);
+    // atb bar
+    g.fillStyle='#000'; g.fillRect(400,y-6,70,6);
+    g.fillStyle=p.atb>=1?'#f0d050':'#5a8fc8'; g.fillRect(401,y-5,68*Math.min(1,p.atb),4);
+  });
+  // command menu (left)
+  const m=battle.menu;
+  g.font='8px monospace'; g.textAlign='left';
+  if(battle.result){
+    g.fillStyle=C.gold; g.font='12px monospace';
+    if(battle.result.win){
+      g.fillText('VICTORY!',16,224);
+      g.font='8px monospace'; g.fillStyle='#fffae8';
+      g.fillText('+'+battle.result.xp+' XP   +'+battle.result.gd+' GOLD',16,238);
+      g.fillStyle=C.dim; g.fillText('Z: CONTINUE',16,252);
+    } else {
+      g.fillStyle='#cc4040'; g.fillText('THE PACK HAS FALLEN...',16,230);
+      g.fillStyle=C.dim; g.font='8px monospace'; g.fillText('Z: CONTINUE',16,246);
+    }
+  } else if(m){
+    g.fillStyle=C.gold; g.fillText(m.who.name+"'S TURN",16,214);
+    if(m.stage==='root'){
+      m.opts.forEach((o,i)=>{
+        g.fillStyle=o.dis?'#4a3e58':(i===m.idx?'#fffae8':C.ui);
+        g.fillText((i===m.idx?'> ':'  ')+o.label+(o.sub?'  ['+o.sub+']':''),16,226+i*10);
+      });
+    } else if(m.stage==='target'){
+      g.fillStyle='#fffae8'; g.fillText('CHOOSE TARGET  (X: back)',16,228);
+      const ts=alive(battle.foes), tg=ts[m.tIdx];
+      if(tg){ g.fillStyle=C.gold; g.font='10px monospace'; g.textAlign='center';
+        g.fillText('▼',tg.x,tg.y-(tg.d.boss?64:44)); g.textAlign='left'; g.font='8px monospace';
+        g.fillText('> '+tg.d.name,16,240); }
+    } else if(m.stage==='item'){
+      g.fillStyle='#fffae8'; g.fillText('ITEMS  (X: back)',16,226);
+      m.items.forEach((id,i)=>{
+        g.fillStyle=i===m.idx2?'#fffae8':C.ui;
+        g.fillText((i===m.idx2?'> ':'  ')+ITEMDEF[id].name+' x'+inv[id]+'  '+ITEMDEF[id].desc,16,238+i*10);
+      });
+    } else if(m.stage==='ally'){
+      g.fillStyle='#fffae8'; g.fillText('USE ON WHOM?  (X: back)',16,228);
+      const ts=alive(party);
+      g.fillStyle=C.gold; g.fillText('> '+ts[m.aIdx].name,16,240);
+    }
+  } else if(!flags.battleHint){
+    g.fillStyle=C.dim;
+    g.fillText('WAIT FOR THE GOLD BAR TO FILL...',16,226);
+    g.fillText('Z: CONFIRM   X: CANCEL   ARROWS: CHOOSE',16,238);
+  }
+}
+
+// ============================== SCREENS ==============================
+function drawTitle(){
+  const grd=g.createLinearGradient(0,0,0,VIEW_H);
+  grd.addColorStop(0,'#1a1030'); grd.addColorStop(1,'#0a0612');
+  g.fillStyle=grd; g.fillRect(0,0,VIEW_W,VIEW_H);
+  // henge silhouette + moon
+  g.fillStyle='#d8d0e8'; g.fillRect(VIEW_W-90,30,28,28);
+  g.fillStyle='#b8b0cc'; g.fillRect(VIEW_W-85,36,6,6); g.fillRect(VIEW_W-74,46,5,5);
+  g.fillStyle='#241c3a';
+  [[-40,0],[-20,-8],[0,-12],[20,-8],[40,0]].forEach(([dx,dy])=>{
+    g.fillRect(VIEW_W/2+dx-5,170+dy,10,34-dy);
+  });
+  const hum=0.4+Math.sin(tGlobal*2.5)*0.35;
+  g.fillStyle='rgba(120,200,255,'+hum+')'; g.fillRect(VIEW_W/2-3,186,6,14);
+  g.fillStyle='#16101e'; g.fillRect(0,200,VIEW_W,VIEW_H);
+  // the two heroes
+  dogSprite(VIEW_W/2-30,198,'corgi',C.corgi,'right',tGlobal*0.5,2);
+  dogSprite(VIEW_W/2+30,198,'shiba',C.shiba,'left',tGlobal*0.5,2);
+  // title
+  g.textAlign='center';
+  g.fillStyle='#000'; g.font='bold 26px monospace';
+  g.fillText('SPITZ CHRONICLE',VIEW_W/2+2,72);
+  g.fillStyle=C.gold; g.fillText('SPITZ CHRONICLE',VIEW_W/2,70);
+  g.font='10px monospace'; g.fillStyle=C.ui;
+  g.fillText('— B A R K   O F   T I M E —',VIEW_W/2,88);
+  g.fillStyle=C.dim; g.font='8px monospace';
+  g.fillText('A TALE OF THE SIX GREAT PACKS',VIEW_W/2,102);
+  if(Math.sin(tGlobal*4)>-0.3){
+    g.fillStyle='#fffae8'; g.font='10px monospace';
+    g.fillText('PRESS Z',VIEW_W/2,235);
+  }
+  g.fillStyle=C.dim; g.font='8px monospace';
+  g.fillText('ARROWS/WASD MOVE · Z CONFIRM · X CANCEL',VIEW_W/2,256);
+}
+function drawPages(pages,title){
+  g.fillStyle='#06030e'; g.fillRect(0,0,VIEW_W,VIEW_H);
+  g.textAlign='center';
+  if(title){ g.fillStyle=C.gold; g.font='10px monospace'; g.fillText(title,VIEW_W/2,50); }
+  g.fillStyle='#cfc8dc'; g.font='9px monospace';
+  wrapText(pages[pagei],VIEW_W/2,120,360,14,'center');
+  g.fillStyle=C.dim; g.font='8px monospace';
+  g.fillText('Z',VIEW_W/2,240);
+}
+function wrapText(txt,x,y,maxw,lh,align){
+  g.textAlign=align||'left';
+  const words=txt.split(' '); let line='', yy=y;
+  words.forEach(w=>{
+    const test=line?line+' '+w:w;
+    if(g.measureText(test).width>maxw){ g.fillText(line,x,yy); yy+=lh; line=w; }
+    else line=test;
+  });
+  if(line) g.fillText(line,x,yy);
+}
+function drawDialog(){
+  drawWorld();
+  const page=dlg.pages[dlg.pi];
+  g.fillStyle='rgba(4,1,14,0.94)'; g.fillRect(8,VIEW_H-78,VIEW_W-16,62);
+  g.strokeStyle=C.gold; g.strokeRect(8.5,VIEW_H-77.5,VIEW_W-17,61);
+  g.font='8px monospace'; g.textAlign='left';
+  g.fillStyle=C.gold; g.fillText(dlg.name,16,VIEW_H-66);
+  g.fillStyle='#fffae8';
+  dlg.ci=Math.min(page.length,dlg.ci+1.6);
+  wrapText(page.slice(0,Math.floor(dlg.ci)),16,VIEW_H-54,VIEW_W-40,11);
+  if(dlg.ci>=page.length && Math.sin(tGlobal*5)>0){
+    g.fillStyle=C.dim; g.textAlign='right'; g.fillText('Z ▼',VIEW_W-16,VIEW_H-22);
+  }
+}
+function updateDialog(){
+  const page=dlg.pages[dlg.pi];
+  if(pr('a')){
+    if(dlg.ci<page.length){ dlg.ci=page.length; }
+    else {
+      sfx.cursor();
+      dlg.pi++; dlg.ci=0;
+      if(dlg.pi>=dlg.pages.length){
+        const done=dlg.done; dlg=null; interactCd=0.35;
+        if(mode==='dialog') mode='world';
+        if(done) done();
+      }
+    }
+  }
+}
+function drawGameover(){
+  g.fillStyle='#0c0410'; g.fillRect(0,0,VIEW_W,VIEW_H);
+  g.textAlign='center';
+  g.fillStyle='#cc4040'; g.font='bold 18px monospace';
+  g.fillText('THE PACK HAS FALLEN',VIEW_W/2,110);
+  g.fillStyle=C.dim; g.font='8px monospace';
+  g.fillText('But the festival fires still burn, two hundred years away.',VIEW_W/2,140);
+  g.fillStyle='#fffae8'; g.fillText('Z: WAKE UP IN WAGFORD',VIEW_W/2,170);
+}
+
+// ============================== MAIN LOOP ==============================
+let last=0;
+function frame(ts){
+  const dt=Math.min(0.05,(ts-last)/1000)||0.016; last=ts; tGlobal+=dt;
+  if(toastT>0) toastT-=dt;
+
+  // fade
+  if(fadeDir!==0){ fade+=fadeDir*dt*2.2; if(fade>=1){fade=1;} if(fade<=0){fade=0;fadeDir=0;} }
+
+  if(mode==='title'){
+    drawTitle();
+    if(pr('a')){ sfx.ok(); mode='intro'; pagei=0; }
+  }
+  else if(mode==='intro'){
+    drawPages(INTRO,'~ THE FESTIVAL OF THE TRUCE ~');
+    if(pr('a')){ sfx.cursor(); pagei++; if(pagei>=INTRO.length){ mode='world'; fade=1; fadeDir=-1; } }
+  }
+  else if(mode==='world'){ updateWorld(dt); if(mode==='world'||mode==='battleIn'||mode==='swap') drawWorld(); else if(mode==='dialog') drawDialog(); }
+  else if(mode==='dialog'){ drawDialog(); updateDialog(); }
+  else if(mode==='swap'){ drawWorld(); }
+  else if(mode==='battleIn'){
+    drawWorld();
+    swirl+=dt*2.4;
+    g.save(); g.translate(VIEW_W/2,VIEW_H/2);
+    for(let i=0;i<10;i++){
+      g.fillStyle='rgba(8,2,18,'+Math.min(1,swirl)+')';
+      g.save(); g.rotate(swirl*3+i*0.628);
+      g.fillRect(0,-14,VIEW_W,28); g.restore();
+    }
+    g.restore();
+    if(swirl>=1){
+      const f=pendingBattle; pendingBattle=null;
+      startBattle(f.group,f);
+      if(!flags.battleHint){
+        flags.battleHint=false; // hint shows in panel until first menu opens
+      }
+    }
+  }
+  else if(mode==='battle'){ updateBattle(dt); if(battle) drawBattle(); }
+  else if(mode==='ending'){
+    drawPages(ENDING, pagei===ENDING.length-1?'~ FIN ~':'~ THE ROAD HOME ~');
+    if(pagei===ENDING.length-1){
+      dogSprite(VIEW_W/2-20,200,'corgi',C.corgi,'down',tGlobal*0.4,2);
+      dogSprite(VIEW_W/2+20,200,'shiba',C.shiba,'down',tGlobal*0.4,2);
+    }
+    if(pr('a')){ sfx.cursor(); pagei++;
+      if(pagei>=ENDING.length){ resetGame(); mode='title'; } }
+  }
+  else if(mode==='gameover'){
+    drawGameover();
+    if(pr('a')){
+      sfx.ok();
+      era='present'; player.x=6*T+8; player.y=10*T+8;
+      healParty(); mode='world'; fade=1; fadeDir=-1;
+    }
+  }
+
+  // toast
+  if(toastT>0 && mode!=='title'){
+    g.font='8px monospace'; g.textAlign='center';
+    g.fillStyle='rgba(4,1,14,0.9)';
+    const w=g.measureText(toastMsg).width+16;
+    g.fillRect(VIEW_W/2-w/2,18,w,14);
+    g.fillStyle=C.gold; g.fillText(toastMsg,VIEW_W/2,28);
+  }
+  // fade overlay
+  if(fade>0){ g.fillStyle='rgba(248,250,255,'+fade+')'; g.fillRect(0,0,VIEW_W,VIEW_H); }
+
+  for(const k in hit) hit[k]=false;
+  requestAnimationFrame(frame);
+}
+function resetGame(){
+  era='present'; player.x=6*T+8; player.y=10*T+8; player.dir='down';
+  party=[mkHero('pip','PIP','corgi',C.corgi,62,8,11,1.0)];
+  inv={kibble:3,biscuit:1}; gold=25;
+  Object.keys(flags).forEach(k=>flags[k]=false);
+  spawnFoes();
+  // restore Akamaru NPC
+  if(!NPCS.siege.find(n=>n.id==='akamaru')){
+    NPCS.siege.unshift({id:'akamaru', x:26.5*T, y:7.5*T, breed:'shiba', col:C.shiba, name:'???',
+      lines:()=>["... ...","You are not of this era. Your fur smells of festivals.",
+        "I am Akamaru. The cats' Whisker Company holds the road east, and a cursed stone walks before the henge.",
+        "...Your walls fell too, didn't they. Very well. We go together."],
+      after(){ recruitAkamaru(); }});
+  }
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
