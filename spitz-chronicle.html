@@ -303,80 +303,107 @@ const clouds=[];
 for(let i=0;i<5;i++) clouds.push({x:Math.random()*WORLD_W,y:8+Math.random()*50,w:120+Math.random()*160,s:4+Math.random()*5});
 
 // ============================== SPRITES ==============================
-// Upright 16-bit style dog. Drawn in 2px logical units, origin at feet.
+// Sprite rects are buffered so a 1px dark outline pass can be drawn first
+// (the classic 16-bit look), then the fills on top. Detail rects (eyes,
+// markings) are flagged to skip the outline.
+let SPR=[];
+function sp(x,y,w,h,c,noOut){ SPR.push([x,y,w,h,c,noOut]); }
+function flushSpr(u,oc){
+  g.fillStyle=oc||'#171019';
+  for(const r of SPR) if(!r[5]) g.fillRect(r[0]*u-1,r[1]*u-1,r[2]*u+2,r[3]*u+2);
+  for(const r of SPR){ g.fillStyle=r[4]; g.fillRect(r[0]*u,r[1]*u,r[2]*u,r[3]*u); }
+  SPR.length=0;
+}
+// Upright 16-bit style dog. 2px logical units, origin at feet.
 function dogSprite(x,y,o,dir,step,sc){
   sc=sc||1;
   const fur=o.fur||FUR[o.breed]||'#c08050', wear=o.wear||'#555';
-  const dk=shade(fur,-40), lt=shade(fur,30), wd=shade(wear,-40);
+  const dk=shade(fur,-45), lt=shade(fur,35);
+  const wd=shade(wear,-45), wl=shade(wear,28);
   g.save(); g.translate(Math.round(x),Math.round(y)); g.scale(sc,sc);
   if(dir==='left') g.scale(-1,1);
   const side=(dir==='left'||dir==='right');
-  const u=2, P=(px,py,w,h,c)=>R(px*u,py*u,w*u,h*u,c);
-  // shadow
-  P(-6,-1,12,2,'rgba(0,0,0,0.35)');
-  const f4=Math.floor(step*7)%4, lift=[0,1,0,1][f4], lift2=[1,0,1,0][f4];
-  const idle=o.moving===false?0:0;
-  // legs
-  P(-4,-5+0,3,5-lift,fur); P(-4,-1-(0),3,1,dk);
-  P(1,-5,3,5-lift2,fur);   P(1,-1,3,1,dk);
-  // body / tunic
-  P(-6,-13,12,8,wear);
-  P(-6,-13,2,8,shade(wear,25));
-  P(3,-13,3,8,wd);
-  P(-6,-7,12,1,wd);                      // belt
-  P(-1,-7,2,1,'#e8c050');                // buckle
-  // arms
-  if(side){ P(3,-12,3,5,fur); P(3,-8,3,1,dk); }
-  else { P(-7,-12,2,5,fur); P(5,-12,2,5,fur); P(-7,-8,2,1,dk); P(5,-8,2,1,dk); }
-  // tail
+  const u=2, P=sp;
+  // shadow (no outline)
+  g.fillStyle='rgba(0,0,0,0.3)'; g.fillRect(-12,-3,24,4); g.fillRect(-8,-5,16,2);
+  // 4-frame walk cycle: contact / pass / contact / pass
+  const moving=step>0;
+  const f4=Math.floor(step*8)%4;
+  const B=moving&&(f4===1||f4===3)?-1:0;          // body bob on passing frames
+  const sA=moving?[2,0,-2,0][f4]:0;               // front leg stride
+  const sB=-sA;
+  const wag=Math.round(Math.sin(tGlobal*5+(o.id==='aka'?2:0)));
+  // tail & sword drawn first, behind the body
   if(o.breed==='shiba'||o.breed==='laika'||o.breed==='chow'){
-    P(side?-8:-8,-15,2,3,fur); P(side?-8:-8,-15,2,1,lt);   // curled over back
-  } else if(o.breed!=='bulldog'){ P(-8,-10,2,4,fur); }
-  // sword on back (Akamaru)
-  if(o.sword){ P(-7,-21,2,9,'#888c9a'); P(-7,-22,2,2,'#e8c050'); }
-  // head
+    P(-8,-15+B+(wag>0?-1:0),3,4,fur); P(-8,-15+B+(wag>0?-1:0),3,1,lt,1);
+  } else if(o.breed!=='bulldog'){
+    P(-9,-12+B+wag,3,2,fur); P(-8,-10+B+wag,2,3,fur);
+  }
+  if(o.sword){ P(-7,-22+B,2,10,'#9aa0b2'); P(-7,-23+B,3,2,'#e8c050'); P(-7,-13+B,3,2,'#5a3a1e'); }
+  // legs
+  if(side){
+    P(-5+sB,-5,4,5,dk);  P(-5+sB,-2,4,2,shade(fur,-60),1);
+    P(2+sA,-5,4,5,fur);  P(2+sA,-2,4,2,dk,1);
+  } else {
+    const lA=moving&&f4===1?1:0, lB=moving&&f4===3?1:0;
+    P(-5,-5,4,5-lA,fur); P(-5,-2-lA,4,2,dk,1);
+    P(2,-5,4,5-lB,fur);  P(2,-2-lB,4,2,dk,1);
+  }
+  // body / tunic (3-tone)
+  P(-6,-13+B,12,9,wear);
+  P(-6,-13+B,3,9,wl,1);
+  P(3,-13+B,3,9,wd,1);
+  P(-6,-13+B,12,1,wl,1);
+  P(-6,-6+B,12,2,wd,1);
+  P(-6,-8+B,12,1,'#3a2c14',1); P(-1,-8+B,2,1,'#e8c050',1);  // belt + buckle
+  // arms (swing opposite the stride in side view)
+  if(side){ const aw=moving?-sA/2:0; P(3+aw,-12+B,3,5,fur); P(3+aw,-9+B,3,2,dk,1); }
+  else { P(-8,-12+B,2,5,fur); P(6,-12+B,2,5,fur); P(-8,-9+B,2,2,dk,1); P(6,-9+B,2,2,dk,1); }
+  // head (3-tone)
   const hx=side?-3:-5;
-  P(hx,-21,10,8,fur);
-  P(hx,-21,10,2,lt);
-  P(hx+8,-21,2,8,dk);
-  // chow mane
-  if(o.breed==='chow'){ P(hx-2,-22,14,9,dk); P(hx,-21,10,7,fur); }
+  if(o.breed==='chow') P(hx-2,-22+B,14,10,dk);
+  P(hx,-21+B,10,8,fur);
+  P(hx,-21+B,10,2,lt,1);
+  P(hx,-21+B,2,8,lt,1);
+  P(hx+8,-21+B,2,8,dk,1);
   // ears
   if(o.breed==='corgi'){
-    P(hx-1,-26,3,6,fur); P(hx+8,-26,3,6,fur);
-    P(hx,-25,1,4,'#5a2a18'); P(hx+9,-25,1,4,'#5a2a18');
+    P(hx-1,-27+B,4,7,fur); P(hx+7,-27+B,4,7,fur);
+    P(hx,-26+B,2,5,'#5a2a18',1); P(hx+8,-26+B,2,5,'#5a2a18',1);
   } else if(o.breed==='shiba'){
-    P(hx,-25,3,4,fur); P(hx+7,-25,3,4,fur);
-    P(hx+1,-24,1,2,'#7a3018'); P(hx+8,-24,1,2,'#7a3018');
+    P(hx,-25+B,3,5,fur); P(hx+7,-25+B,3,5,fur);
+    P(hx+1,-24+B,1,3,'#7a3018',1); P(hx+8,-24+B,1,3,'#7a3018',1);
   } else if(o.breed==='bulldog'){
-    P(hx-1,-22,2,3,dk); P(hx+9,-22,2,3,dk);
+    P(hx-1,-22+B,2,3,dk); P(hx+9,-22+B,2,3,dk);
   } else if(o.breed==='laika'){
-    P(hx,-25,2,4,fur); P(hx+8,-25,2,4,fur);
+    P(hx,-26+B,3,5,fur); P(hx+7,-26+B,3,5,fur);
+    P(hx+1,-25+B,1,3,dk,1); P(hx+8,-25+B,1,3,dk,1);
   } else if(o.breed==='pwd'){
-    P(hx-1,-23,2,6,dk); P(hx+9,-23,2,6,dk);
-    P(hx+2,-23,2,1,dk); P(hx+6,-24,2,1,dk);
+    P(hx-1,-23+B,2,7,dk); P(hx+9,-23+B,2,7,dk);
+    P(hx+1,-23+B,3,2,dk); P(hx+5,-24+B,3,2,dk);
   } else if(o.breed==='chow'){
-    P(hx,-24,2,2,dk); P(hx+8,-24,2,2,dk);
+    P(hx,-24+B,2,2,dk); P(hx+8,-24+B,2,2,dk);
   }
   // face
   if(dir!=='up'){
     if(side){
-      P(hx+7,-18,4,4,fur); P(hx+7,-18,4,1,lt);     // muzzle forward
-      P(hx+10,-17,1,2,'#14080a');                  // nose
-      P(hx+5,-19,2,2,'#14080a'); P(hx+5,-19,1,1,'#fff');
-      if(o.breed==='corgi') P(hx+6,-21,2,7,'#f0e8d8');
-      if(o.breed==='shiba') P(hx+6,-16,3,3,'#f0e0c8');
+      P(hx+7,-18+B,4,4,fur); P(hx+7,-18+B,4,1,lt,1);
+      P(hx+10,-17+B,1,2,'#14080a',1);
+      P(hx+5,-19+B,2,2,'#14080a',1); P(hx+5,-19+B,1,1,'#fff',1);
+      if(o.breed==='corgi') P(hx+6,-21+B,2,7,'#f0e8d8',1);
+      if(o.breed==='shiba') P(hx+6,-16+B,3,3,'#f0e0c8',1);
     } else {
-      P(-2,-17,4,4,fur); P(-2,-17,4,1,lt);
-      P(-1,-15,2,2,'#14080a');
-      P(hx+2,-19,2,2,'#14080a'); P(hx+6,-19,2,2,'#14080a');
-      P(hx+2,-19,1,1,'#fff');   P(hx+6,-19,1,1,'#fff');
-      if(o.breed==='corgi') P(-1,-21,2,4,'#f0e8d8');
-      if(o.breed==='shiba'){ P(hx+1,-16,2,2,'#f0e0c8'); P(hx+7,-16,2,2,'#f0e0c8'); }
-      if(o.breed==='bulldog'){ P(hx+2,-15,2,2,'#f0e8d8'); P(hx+6,-15,2,2,'#f0e8d8'); }
-      if(o.breed==='laika') P(hx+2,-15,6,2,'#f0e8d8');
+      P(-2,-17+B,4,4,fur); P(-2,-17+B,4,1,lt,1);
+      P(-1,-15+B,2,2,'#14080a',1);
+      P(hx+2,-19+B,2,2,'#14080a',1); P(hx+6,-19+B,2,2,'#14080a',1);
+      P(hx+2,-19+B,1,1,'#fff',1);   P(hx+6,-19+B,1,1,'#fff',1);
+      if(o.breed==='corgi') P(-1,-21+B,2,4,'#f0e8d8',1);
+      if(o.breed==='shiba'){ P(hx+1,-16+B,2,2,'#f0e0c8',1); P(hx+7,-16+B,2,2,'#f0e0c8',1); }
+      if(o.breed==='bulldog'){ P(hx+2,-15+B,2,2,'#f0e8d8',1); P(hx+6,-15+B,2,2,'#f0e8d8',1); }
+      if(o.breed==='laika') P(hx+2,-15+B,6,2,'#f0e8d8',1);
     }
   }
+  flushSpr(u);
   g.restore();
 }
 function shade(hex,amt){
@@ -385,42 +412,55 @@ function shade(hex,amt){
   r=Math.max(0,Math.min(255,r)); gr=Math.max(0,Math.min(255,gr)); b=Math.max(0,Math.min(255,b));
   return 'rgb('+r+','+gr+','+b+')';
 }
-// Quadruped war hound. fl=+1 faces right, -1 faces left.
-function houndSprite(x,y,t,fl,sc){
+// Quadruped war hound. fl=+1 faces right, -1 faces left. mv=1 walking.
+function houndSprite(x,y,t,fl,sc,mv){
   sc=sc||1; g.save(); g.translate(Math.round(x),Math.round(y)); g.scale(sc*fl,sc);
-  const u=2, P=(px,py,w,h,c)=>R(px*u,py*u,w*u,h*u,c);
-  P(-9,-1,18,2,'rgba(0,0,0,0.35)');
-  const f2=Math.floor(t*6)%2;
-  P(-7,-4+f2,3,4-f2,'#241620'); P(4,-4+(1-f2),3,4-(1-f2),'#241620');
-  P(-8,-11,16,8,'#3a2430');
-  P(-8,-11,16,2,'#4e3240');
-  P(-8,-5,16,2,'#241620');
-  P(-10,-9,3,5,'#2c1a26');                       // haunch
-  P(4,-16,8,7,'#3a2430'); P(4,-16,8,2,'#4e3240'); // head fwd
-  P(10,-13,3,3,'#2c1a26'); P(12,-12,1,1,'#14080a'); // snout+nose
-  P(4,-19,3,4,'#241620'); P(8,-19,3,4,'#241620');   // ears
-  P(7,-14,2,2,'#ff4848'); P(7,-14,1,1,'#ffb0b0');   // eye
-  P(9,-10,3,1,'#e8e0d0');                           // teeth
-  P(-2,-12,1,2,'#888c9a'); P(2,-12,1,2,'#888c9a');  // spiked collar
+  const u=2, P=sp;
+  g.fillStyle='rgba(0,0,0,0.3)'; g.fillRect(-19,-3,38,4);
+  const f4=Math.floor(t*7)%4;
+  const sA=mv?[2,0,-2,0][f4]:0;
+  const B=mv&&(f4===1||f4===3)?-1:Math.round(Math.sin(t*2.2)*0.6); // walk bob / idle breathing
+  // legs (two pairs, counter-striding)
+  P(-7-sA/2,-5,3,5,'#241620'); P(4+sA,-5,3,5,'#241620');
+  P(-4+sA/2,-5,3,5,'#180e14'); P(7-sA,-5,3,5,'#180e14');
+  // body (3-tone)
+  P(-9,-12+B,18,8,'#3a2430');
+  P(-9,-12+B,18,2,'#523648',1);
+  P(-9,-6+B,18,2,'#241620',1);
+  P(-11,-10+B,4,6,'#2c1a26');                           // haunch
+  P(-9,-13+B,5,2,'#2c1a26');                            // shoulder fur
+  // head forward
+  P(4,-17+B,9,7,'#3a2430'); P(4,-17+B,9,2,'#523648',1);
+  P(11,-14+B,4,3,'#2c1a26'); P(14,-13+B,1,1,'#14080a',1);
+  P(4,-20+B,3,4,'#241620'); P(9,-20+B,3,4,'#241620');   // ears
+  P(8,-15+B,2,2,'#ff4848',1); P(8,-15+B,1,1,'#ffc0c0',1);
+  P(10,-11+B,4,1,'#e8e0d0',1);                          // bared teeth
+  P(-1,-13+B,1,2,'#9aa0b2'); P(2,-13+B,1,2,'#9aa0b2');  // spiked collar
+  flushSpr(u);
   g.restore();
 }
-// Biped cat sapper with bomb. fl=+1 faces right.
-function catSprite(x,y,t,fl,sc){
+// Biped cat sapper with bomb. fl=+1 faces right. mv=1 walking.
+function catSprite(x,y,t,fl,sc,mv){
   sc=sc||1; g.save(); g.translate(Math.round(x),Math.round(y)); g.scale(sc*fl,sc);
-  const u=2, P=(px,py,w,h,c)=>R(px*u,py*u,w*u,h*u,c);
-  P(-6,-1,12,2,'rgba(0,0,0,0.35)');
-  P(-3,-4,2,4,'#5a5a66'); P(1,-4,2,4,'#5a5a66');
-  P(-4,-10,8,6,'#6a6a78'); P(-4,-10,8,1,'#82828e'); P(2,-10,2,6,'#52525e');
-  P(-7,-8+Math.round(Math.sin(t*4)),3,2,'#5a5a66');   // tail
-  P(-2,-16,8,7,'#6a6a78'); P(-2,-16,8,1,'#82828e');
-  P(-2,-19,3,4,'#5a5a66'); P(3,-19,3,4,'#5a5a66');    // ears
-  P(-1,-18,1,2,'#d05878'); P(4,-18,1,2,'#d05878');
-  P(-2,-14,8,2,'#a02838');                            // bandana
-  P(1,-13,2,2,'#c8e040'); P(1,-13,1,1,'#143014');     // eye
-  P(5,-12,2,1,'#14080a');                             // nose
-  P(6,-9,5,5,'#181620'); P(7,-10,1,1,'#888c9a');      // bomb
-  P(8,-12,1,2,'#e8c050');                             // lit fuse
-  P(8,-13,1,1,Math.floor(t*8)%2?'#ff8030':'#ffe060');
+  const u=2, P=sp;
+  g.fillStyle='rgba(0,0,0,0.3)'; g.fillRect(-13,-3,26,4);
+  const f4=Math.floor(t*7)%4;
+  const lA=mv&&f4===1?1:0, lB=mv&&f4===3?1:0;
+  const B=mv&&(f4===1||f4===3)?-1:0;
+  P(-3,-4,3,4-lA,'#52525e'); P(1,-4,3,4-lB,'#52525e');
+  P(-4,-11+B,8,7,'#6a6a78'); P(-4,-11+B,8,1,'#84848e',1); P(2,-11+B,2,7,'#52525e',1);
+  P(-8,-9+B+Math.round(Math.sin(t*4)),4,2,'#5a5a66');   // swishing tail
+  P(-8,-11+B+Math.round(Math.sin(t*4)),2,3,'#5a5a66');
+  P(-2,-17+B,8,7,'#6a6a78'); P(-2,-17+B,8,1,'#84848e',1);
+  P(-2,-20+B,3,4,'#5a5a66'); P(3,-20+B,3,4,'#5a5a66');  // ears
+  P(-1,-19+B,1,2,'#d05878',1); P(4,-19+B,1,2,'#d05878',1);
+  P(-2,-15+B,8,2,'#a02838',1);                          // bandana
+  P(1,-14+B,2,2,'#c8e040',1); P(1,-14+B,1,1,'#143014',1);
+  P(5,-13+B,2,1,'#14080a',1);                           // nose
+  P(6,-10+B,5,5,'#181620'); P(7,-9+B,1,1,'#9aa0b2',1);  // bomb + glint
+  P(8,-12+B,1,2,'#e8c050',1);
+  P(8,-13+B,1,1,Math.floor(t*8)%2?'#ff8030':'#ffe060',1);
+  flushSpr(u);
   g.restore();
 }
 function sentinelSprite(x,y,t,hurt,sc){
@@ -430,6 +470,10 @@ function sentinelSprite(x,y,t,hurt,sc){
   R(-34,-3,68,6,'rgba(0,0,0,0.4)');
   g.translate(0,bob);
   const body=hurt>0?'#8a6aae':'#4a3a5e', dk2='#322846';
+  // silhouette outline pass
+  g.fillStyle='#171019';
+  g.fillRect(-30,-82,60,72); g.fillRect(-42,-70,16,44); g.fillRect(26,-70,16,44);
+  g.fillRect(-22,-106,44,32);
   R(-28,-80,56,68,body);
   R(-28,-80,10,68,dk2);
   R(-28,-80,56,5,'#5e4a76');
@@ -454,12 +498,20 @@ function sentinelSprite(x,y,t,hurt,sc){
 function drawTile(tx,ty,ch){
   const x=tx*T-camX, y=ty*T-camY;
   const siege=era==='siege';
-  // base grass with texture
+  // base grass with texture + dither
   R(x,y,T,T, siege?'#33242a':'#2c5430');
   const h1=(tx*7+ty*13)%4, h2=(tx*11+ty*5)%4;
   R(x+4+h1*5,y+6,3,3, siege?'#3c2a30':'#346038');
   R(x+18,y+18+h2*2,3,3, siege?'#2a1e24':'#26482a');
   R(x+8,y+24,2,2, siege?'#41302f':'#3a6a40');
+  if((tx*5+ty*11)%7===0){
+    const dc=siege?'#2c2026':'#264a2a';
+    R(x+14,y+8,2,2,dc); R(x+18,y+10,2,2,dc); R(x+14,y+12,2,2,dc); R(x+22,y+8,2,2,dc);
+  }
+  if((tx*3+ty*9)%11===0){
+    R(x+6,y+14,2,4, siege?'#3e2e32':'#3c7244'); R(x+9,y+12,2,6, siege?'#3e2e32':'#3c7244');
+    R(x+12,y+15,2,3, siege?'#3e2e32':'#3c7244');
+  }
   switch(ch){
     case 'p':{
       R(x,y,T,T, siege?'#54423a':'#9a8258');
@@ -613,6 +665,12 @@ function drawTile(tx,ty,ch){
         R(x+((ty)%2?0:16),y,2,T,'#5e4830');
       }
   }
+  // structures cast soft shadows onto the ground tile below them
+  if(curMap==='world' && (ch==='.'||ch==='p'||ch==='*'||ch==='G')){
+    if('thdfoS'.includes(tileAt2(tx,ty-1))) R(x,y,T,7,'rgba(0,0,0,0.22)');
+  }
+  if(curMap!=='world' && !SOLID[ch] && tileAt2(tx,ty-1)==='W')
+    R(x,y,T,7,'rgba(0,0,0,0.22)');
 }
 function tileAt2(tx,ty){
   const M=MAPS[curMap];
@@ -824,13 +882,13 @@ function drawInterior(){
 }
 function drawActors(){
   const list=[];
-  npcsNow().forEach(n=>{ if(!n.statue) list.push({y:n.y,fn:()=>dogSprite(n.x-camX,n.y-camY,n,'down',tGlobal*0.35,1)}); });
+  npcsNow().forEach(n=>{ if(!n.statue) list.push({y:n.y,fn:()=>dogSprite(n.x-camX,n.y-camY,n,'down',0,1)}); });
   if(curMap==='world'&&era==='siege') worldFoes.forEach(f=>{
     if(f.dead) return;
     list.push({y:f.y,fn:()=>{
       if(f.boss) sentinelSprite(f.x-camX,f.y-camY+16,tGlobal,0,0.7);
-      else if(f.group[0]==='cat') catSprite(f.x-camX,f.y-camY,tGlobal,f.dir,1);
-      else houndSprite(f.x-camX,f.y-camY,tGlobal,f.dir,1);
+      else if(f.group[0]==='cat') catSprite(f.x-camX,f.y-camY,tGlobal,f.dir,1,1);
+      else houndSprite(f.x-camX,f.y-camY,tGlobal,f.dir,1,1);
     }});
   });
   if(flags.akamaruJoined){
@@ -1105,8 +1163,8 @@ function drawBattle(){
     if(f.dead) return;
     const fx=f.x+(battle.act&&battle.act.src===f?battle.act.src.lunge:0);
     if(f.d.boss) sentinelSprite(fx,f.y,tGlobal,f.hurt,1);
-    else if(f.d.bomber) catSprite(fx,f.y,tGlobal,1,2);
-    else houndSprite(fx,f.y,tGlobal,1,2);
+    else if(f.d.bomber) catSprite(fx,f.y,tGlobal,1,2,0);
+    else houndSprite(fx,f.y,tGlobal,1,2,0);
     if(f.hurt>0){ g.fillStyle='rgba(255,120,120,0.3)';
       g.fillRect(fx-44,f.y-(f.d.boss?120:80),88,f.d.boss?128:88); }
     const r=f.hp/f.max;
